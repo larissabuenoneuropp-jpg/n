@@ -14,6 +14,17 @@ export interface Guardian {
   relation: string;
   phone: string;
   email?: string;
+  cpf?: string;
+  rg?: string;
+}
+
+export interface Address {
+  street?: string;
+  number?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
 }
 
 export interface Anamnesis {
@@ -44,8 +55,13 @@ export interface Patient extends Base {
   referred_by?: string;
   payment_type: "particular" | "convenio";
   insurance_name?: string;
+  /** Valor da sessão de intervenção. */
   session_value?: number;
+  /** Valor da sessão de avaliação. */
+  assessment_value?: number;
   weekly_frequency?: number;
+  /** Endereço do responsável contratante (usado no contrato e no recibo). */
+  address?: Address;
   start_date?: string | null;
   general_goals?: string;
   notes?: string;
@@ -255,6 +271,29 @@ export interface Profile {
   session_minutes?: number;
   templates?: Record<string, string>;
   lgpd_consent_at?: string | null;
+  /** Linha abaixo da assinatura, ex.: "Professora e Neuropsicopedagoga". */
+  signature_title?: string;
+  cbo?: string;
+  whatsapp?: string;
+  instagram?: string;
+  city?: string;
+  state?: string;
+}
+
+/** Recibo de pagamento gerado automaticamente quando uma receita é marcada como paga. */
+export interface Receipt extends Base {
+  number: number;
+  transaction_id?: ID | null;
+  patient_id?: ID | null;
+  issue_date: string;
+  amount: number;
+  payer_name: string;
+  payer_cpf?: string;
+  payer_city?: string;
+  payer_state?: string;
+  payer_email?: string;
+  description: string;
+  service_dates: string[];
 }
 
 export interface AuditLog {
@@ -318,6 +357,7 @@ export interface TableMap {
   reports: Report;
   instruments: Instrument;
   assessment_records: AssessmentRecord;
+  receipts: Receipt;
 }
 
 export type TableName = keyof TableMap;

@@ -1,23 +1,24 @@
 "use client";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { FileText, Plus, Printer, Save, Sparkles, Trash2 } from "lucide-react";
+import { FileText, Plus, Printer, RefreshCw, Save, Sparkles, Trash2 } from "lucide-react";
 import { AiNotice, Badge, Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { useCollection, useData } from "@/lib/data/provider";
 import { askAI, patientContext } from "@/lib/ai/client";
 import { DEFAULT_TEMPLATES, REPORT_TYPES } from "@/lib/templates";
 import type { Assessment, InterventionPlan, Patient, Profile, Report, SessionRecord } from "@/lib/types";
 import { ageLabel, fillTemplate, formatDate, today } from "@/lib/utils";
+import { cityDate, contractContent, contractVars } from "@/lib/documents";
+import { LetterheadPrint } from "@/components/letterhead-print";
 
 function buildVars(p: Patient | undefined, prof: Profile | null, plan?: InterventionPlan, assessment?: Assessment, sessions: SessionRecord[] = []) {
-  const city = prof?.address?.split("—").pop()?.split("/")[0]?.trim();
-  const dateLong = new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
   return {
+    ...contractVars(p, prof),
     paciente: p?.name, idade: ageLabel(p?.birth_date), nascimento: formatDate(p?.birth_date),
     responsavel: p?.guardians?.[0]?.name, escola: p?.school, serie: p?.grade, diagnostico: p?.diagnosis, hipoteses: p?.hypotheses,
     queixa: p?.anamnesis?.complaints, profissional: prof?.professional_name, profissao: prof?.profession ?? "Neuropsicopedagoga",
     crnpp: prof?.crnpp, clinica: prof?.clinic_name, data: formatDate(today()),
-    cidade_data: `${city ? `${city}, ` : ""}${dateLong}.`,
+    cidade_data: cityDate(prof),
     objetivo_geral: plan?.general_objective,
     objetivos_especificos: plan?.specific_objectives.map((o, i) => `${i + 1}. ${o.text}`).join("\n"),
     metas: plan?.goals.map((g) => `• ${g.text}`).join("\n"),
@@ -78,13 +79,7 @@ function ReportEditor({ report, patient, onSave, onDelete }: { report: Report; p
   const [instruction, setInstruction] = useState("");
   const [aiText, setAiText] = useState<{ text: string; demo: boolean } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [logo, setLogo] = useState<string | null>(null);
-  const [signature, setSignature] = useState<string | null>(null);
   useEffect(() => setF(report), [report]);
-  useEffect(() => {
-    if (profile?.logo_url) store.fileUrl(profile.logo_url).then(setLogo).catch(() => {});
-    if (profile?.signature_url) store.fileUrl(profile.signature_url).then(setSignature).catch(() => {});
-  }, [profile, store]);
 
   async function runAI() {
     setAiLoading(true);
@@ -112,7 +107,14 @@ function ReportEditor({ report, patient, onSave, onDelete }: { report: Report; p
       <Card className="no-print flex flex-wrap items-center gap-2 p-3">
         <Input className="min-w-[200px] flex-1" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
         <Select className="w-36" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as Report["status"] })} options={[{ value: "rascunho", label: "Rascunho" }, { value: "finalizado", label: "Finalizado" }]} />
-        <Button variant="ai" size="sm" className="h-9" onClick={() => { setAiText(null); setAiOpen(true); }}><Sparkles className="h-4 w-4" /> Redigir com IA</Button>
+        {f.type === "contrato" && patient ? (
+          <Button variant="secondary" size="sm" className="h-9" title="Preenche novamente com os dados atuais do cadastro e das configurações"
+            onClick={() => { if (confirm("Substituir o texto pelos dados atuais do cadastro? Edições manuais serão perdidas.")) setF({ ...f, content: contractContent(patient, profile) }); }}>
+            <RefreshCw className="h-4 w-4" /> Atualizar do cadastro
+          </Button>
+        ) : (
+          <Button variant="ai" size="sm" className="h-9" onClick={() => { setAiText(null); setAiOpen(true); }}><Sparkles className="h-4 w-4" /> Redigir com IA</Button>
+        )}
         <Button variant="secondary" size="sm" className="h-9" onClick={() => window.print()}><Printer className="h-4 w-4" /> PDF</Button>
         <Button variant="danger" size="sm" className="h-9" onClick={onDelete} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
         <Button size="sm" className="h-9" loading={saving} onClick={async () => { setSaving(true); await onSave(f).finally(() => setSaving(false)); }}><Save className="h-4 w-4" /> Salvar</Button>
@@ -120,24 +122,8 @@ function ReportEditor({ report, patient, onSave, onDelete }: { report: Report; p
 
       <Textarea className="no-print min-h-[60vh] font-mono text-[13px]" value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} />
 
-      {/* Versão de impressão com cabeçalho e assinatura */}
-      <div className="print-area hidden print:block">
-        <header className="mb-8 flex items-center justify-between border-b border-line pb-4">
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {logo && <img src={logo} alt="" className="h-14 w-14 object-contain" />}
-            <div>
-              <p className="text-lg font-semibold">{profile?.clinic_name}</p>
-              <p className="text-xs text-ink-soft">{profile?.professional_name} · {profile?.profession} · CRNPP {profile?.crnpp}</p>
-            </div>
-          </div>
-          <p className="text-right text-xs text-ink-soft">{profile?.phone}<br />{profile?.email}</p>
-        </header>
-        <div className="whitespace-pre-wrap text-[12pt] leading-relaxed">{f.content}</div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {signature && <img src={signature} alt="Assinatura" className="mt-6 h-16 object-contain" />}
-        <footer className="mt-10 border-t border-line pt-2 text-center text-[9pt] text-ink-faint">{profile?.address} · Documento confidencial — contém dados pessoais sensíveis (LGPD).</footer>
-      </div>
+      {/* Impressão em papel timbrado (cabeçalho e rodapé em todas as páginas) */}
+      <LetterheadPrint content={f.content} profile={profile} />
 
       <Modal open={aiOpen} onClose={() => setAiOpen(false)} wide title="Redação assistida por IA"
         footer={aiText ? <>
@@ -171,9 +157,14 @@ function ReportsInner() {
   const [open, setOpen] = useState(params.get("novo") === "1");
   const pmap = useMemo(() => new Map(patients.data.map((p) => [p.id, p])), [patients.data]);
 
+  const wanted = params.get("id");
+  const [wantedApplied, setWantedApplied] = useState(false);
   useEffect(() => {
-    if (!selected && data.length) setSelected(data[0].id);
-  }, [data, selected]);
+    if (!wantedApplied && wanted && data.some((r) => r.id === wanted)) {
+      setSelected(wanted);
+      setWantedApplied(true);
+    } else if (!selected && data.length) setSelected(data[0].id);
+  }, [data, selected, wanted, wantedApplied]);
 
   if (loading) return <Spinner />;
   const current = data.find((r) => r.id === selected);

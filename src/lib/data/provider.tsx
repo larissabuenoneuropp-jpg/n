@@ -8,6 +8,7 @@ import { SupabaseStore } from "./supabase-store";
 import { DemoStore } from "./demo-store";
 import { ACTIVITY_LIBRARY } from "./activities-library";
 import { INSTRUMENT_LIBRARY } from "./instruments-library";
+import { ensureReceipt } from "@/lib/documents";
 
 interface Ctx {
   store: DataStore;
@@ -64,7 +65,21 @@ export function useData() {
 
 /** Lista reativa de uma tabela, com operações de escrita que atualizam todas as telas. */
 export function useCollection<K extends TableName>(table: K, opts: ListOptions<TableMap[K]> = {}, enabled = true) {
-  const { store, version, bump } = useData();
+  const { store, version, bump, profile } = useData();
+
+  /** Efeitos automáticos após gravar: recibo gerado quando uma entrada é marcada como paga. */
+  const afterWrite = useCallback(
+    async (row: TableMap[K]) => {
+      if (table !== "transactions") return;
+      try {
+        const r = await ensureReceipt(store, row as TableMap["transactions"], profile);
+        if (r) bump("receipts");
+      } catch (e) {
+        console.error("Falha ao gerar recibo", e);
+      }
+    },
+    [table, store, profile, bump],
+  );
   const [data, setData] = useState<TableMap[K][]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,18 +102,20 @@ export function useCollection<K extends TableName>(table: K, opts: ListOptions<T
   const insert = useCallback(
     async (v: Partial<TableMap[K]>) => {
       const r = await store.insert(table, v);
+      await afterWrite(r);
       bump(table);
       return r;
     },
-    [store, table, bump],
+    [store, table, bump, afterWrite],
   );
   const update = useCallback(
     async (id: string, patch: Partial<TableMap[K]>) => {
       const r = await store.update(table, id, patch);
+      await afterWrite(r);
       bump(table);
       return r;
     },
-    [store, table, bump],
+    [store, table, bump, afterWrite],
   );
   const remove = useCallback(
     async (id: string) => {

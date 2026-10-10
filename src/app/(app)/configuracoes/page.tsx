@@ -110,11 +110,15 @@ export default function SettingsPage() {
               <CardHeader title="Dados da clínica" />
               <div className="grid gap-3 p-5 sm:grid-cols-2">
                 <Field label="Nome da clínica" className="sm:col-span-2"><Input value={f.clinic_name ?? ""} onChange={(e) => set("clinic_name", e.target.value)} /></Field>
-                <Field label="CPF/CNPJ"><Input value={f.document ?? ""} onChange={(e) => set("document", e.target.value)} /></Field>
+                <Field label="CPF/CNPJ" hint="Usado no contrato"><Input value={f.document ?? ""} onChange={(e) => set("document", e.target.value)} /></Field>
                 <Field label="Chave PIX"><Input value={f.pix_key ?? ""} onChange={(e) => set("pix_key", e.target.value)} /></Field>
                 <Field label="Telefone"><Input value={f.phone ?? ""} onChange={(e) => set("phone", e.target.value)} /></Field>
                 <Field label="E-mail"><Input type="email" value={f.email ?? ""} onChange={(e) => set("email", e.target.value)} /></Field>
-                <Field label="Endereço" className="sm:col-span-2" hint="Formato sugerido: Rua, nº — Cidade/UF (a cidade é usada nos documentos)"><Input value={f.address ?? ""} onChange={(e) => set("address", e.target.value)} /></Field>
+                <Field label="Endereço da sala de atendimento" className="sm:col-span-2" hint="Aparece no contrato, no recibo e nos rodapés"><Input value={f.address ?? ""} onChange={(e) => set("address", e.target.value)} /></Field>
+                <Field label="Cidade" hint="Usada na data e no foro do contrato"><Input value={f.city ?? ""} onChange={(e) => set("city", e.target.value)} /></Field>
+                <Field label="UF"><Input maxLength={2} value={f.state ?? ""} onChange={(e) => set("state", e.target.value.toUpperCase())} /></Field>
+                <Field label="WhatsApp (cancelamentos)"><Input value={f.whatsapp ?? ""} onChange={(e) => set("whatsapp", e.target.value)} /></Field>
+                <Field label="Instagram"><Input value={f.instagram ?? ""} onChange={(e) => set("instagram", e.target.value)} /></Field>
                 <div className="sm:col-span-2"><p className="mb-1.5 text-xs font-medium text-ink-soft">Logo</p><ImageUpload label="Enviar logo" path={f.logo_url} onChange={(p) => set("logo_url", p)} /></div>
               </div>
             </Card>
@@ -128,6 +132,8 @@ export default function SettingsPage() {
                   </div>
                   <Field label="Profissão"><Select value={f.profession ?? "Neuropsicopedagoga"} onChange={(e) => set("profession", e.target.value)} options={["Neuropsicopedagoga", "Neuropsicopedagogo", "Psicopedagoga", "Psicopedagogo", "Psicóloga", "Psicólogo", "Fonoaudióloga", "Fonoaudiólogo", "Terapeuta Ocupacional"]} /></Field>
                   <Field label="Registro (CRNPP)"><Input value={f.crnpp ?? ""} onChange={(e) => set("crnpp", e.target.value)} /></Field>
+                  <Field label="Título na assinatura" hint="Ex.: Professora e Neuropsicopedagoga"><Input value={f.signature_title ?? ""} onChange={(e) => set("signature_title", e.target.value)} /></Field>
+                  <Field label="CBO (recibo)"><Input value={f.cbo ?? ""} onChange={(e) => set("cbo", e.target.value)} /></Field>
                   <div className="sm:col-span-2">
                     <p className="mb-1.5 text-xs font-medium text-ink-soft">Assinatura (imagem para documentos)</p>
                     <ImageUpload label="Enviar assinatura" path={f.signature_url} onChange={(p) => set("signature_url", p)} />

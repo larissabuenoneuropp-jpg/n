@@ -7,7 +7,7 @@ import { buildSeed } from "./seed";
 const PREFIX = "np:demo:";
 const TABLES: TableName[] = [
   "patients", "assessments", "intervention_plans", "appointments", "session_records",
-  "activities", "documents", "transactions", "reports", "instruments", "assessment_records",
+  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts",
 ];
 
 function read<T>(key: string, fallback: T): T {
@@ -44,6 +44,14 @@ export class DemoStore implements DataStore {
       if (read<unknown[]>("instruments", []).length === 0) write("instruments", seed.instruments);
       if (read<unknown[]>("assessment_records", []).length === 0) write("assessment_records", seed.assessment_records);
       write("seeded_v2", true);
+    }
+    // v3: recibos, dados de contrato e perfil da identidade visual
+    if (typeof window !== "undefined" && !read("seeded_v3", false)) {
+      const seed = buildSeed();
+      if (read<unknown[]>("receipts", []).length === 0) write("receipts", []);
+      const profile = read<Profile>("profile", { id: "demo" });
+      if (!profile.signature_title) write("profile", { ...seed.profile, templates: { ...seed.profile.templates, ...(profile.templates ?? {}) } });
+      write("seeded_v3", true);
     }
   }
 

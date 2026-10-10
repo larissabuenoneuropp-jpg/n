@@ -1,5 +1,5 @@
 import type {
-  Activity, Appointment, Assessment, AssessmentRecord, Instrument, InterventionPlan, Patient, Profile, Report, SessionRecord, Transaction,
+  Activity, Appointment, Assessment, AssessmentRecord, Instrument, Receipt, InterventionPlan, Patient, Profile, Report, SessionRecord, Transaction,
 } from "@/lib/types";
 import { addDays, toISODate, uid } from "@/lib/utils";
 import { ACTIVITY_LIBRARY } from "./activities-library";
@@ -22,7 +22,9 @@ export function buildSeed() {
   const patients: Patient[] = [
     {
       id: p1, name: "Lucas Andrade", birth_date: yearsAgo(8, 3), status: "ativo",
-      guardians: [{ name: "Mariana Andrade", relation: "Mãe", phone: "(11) 98888-1234", email: "mariana@exemplo.com" }],
+      guardians: [{ name: "Mariana Andrade", relation: "Mãe", phone: "(47) 98888-1234", email: "mariana@exemplo.com", cpf: "111.222.333-44", rg: "1.234.567" }],
+      address: { street: "Rua das Palmeiras", number: "120", district: "Centro", city: "Balneário Camboriú", state: "SC", zip: "88330-000" },
+      assessment_value: 250,
       phones: "(11) 98888-1234", email: "mariana@exemplo.com", school: "EMEF Monteiro Lobato", grade: "3º ano", teacher: "Prof.ª Cláudia",
       diagnosis: "", hypotheses: "Dislexia do desenvolvimento", referred_by: "Escola", payment_type: "particular",
       session_value: 180, weekly_frequency: 2, start_date: yearsAgo(0, 4), general_goals: "Desenvolver consciência fonológica e fluência leitora.",
@@ -40,7 +42,9 @@ export function buildSeed() {
     },
     {
       id: p2, name: "Sofia Martins", birth_date: yearsAgo(6, 0, -2), status: "ativo",
-      guardians: [{ name: "Ricardo Martins", relation: "Pai", phone: "(11) 97777-5678" }],
+      guardians: [{ name: "Ricardo Martins", relation: "Pai", phone: "(47) 97777-5678", cpf: "222.333.444-55" }],
+      address: { street: "Av. Brasil", number: "800", district: "Pioneiros", city: "Balneário Camboriú", state: "SC", zip: "88331-000" },
+      assessment_value: 250,
       phones: "(11) 97777-5678", school: "Colégio Aurora", grade: "1º ano", teacher: "Prof.ª Renata",
       diagnosis: "TEA nível 1 de suporte", hypotheses: "", referred_by: "Neuropediatra", payment_type: "convenio",
       insurance_name: "Saúde Mais", session_value: 140, weekly_frequency: 2, start_date: yearsAgo(1),
@@ -62,7 +66,9 @@ export function buildSeed() {
     },
     {
       id: p4, name: "Helena Costa", birth_date: (() => { const d = new Date(now); d.setFullYear(d.getFullYear() - 7); d.setDate(d.getDate() + 3); return iso(d); })(),
-      status: "ativo", guardians: [{ name: "Juliana Costa", relation: "Mãe", phone: "(11) 95555-8765" }],
+      status: "ativo", guardians: [{ name: "Juliana Costa", relation: "Mãe", phone: "(47) 95555-8765", email: "juliana@exemplo.com", cpf: "333.444.555-66", rg: "7.654.321" }],
+      address: { street: "Rua 1500", number: "45", district: "Centro", city: "Balneário Camboriú", state: "SC", zip: "88330-500" },
+      assessment_value: 250,
       phones: "(11) 95555-8765", school: "Escola Viva", grade: "2º ano", teacher: "Prof.ª Bia",
       hypotheses: "Dificuldade de aprendizagem em matemática (investigar discalculia)", referred_by: "Escola",
       payment_type: "particular", session_value: 180, weekly_frequency: 1, start_date: yearsAgo(0, 1),
@@ -175,6 +181,19 @@ export function buildSeed() {
   }
   transactions.push({ id: uid(), type: "receita", category: "Avaliação", patient_id: p4, description: "Avaliação — Helena (1/2)", amount: 900, due_date: iso(addDays(now, -10)), paid_at: null, method: "PIX" });
 
+  const paidWithPatient = transactions.filter((t) => t.type === "receita" && t.paid_at && t.patient_id).sort((a, b) => a.paid_at!.localeCompare(b.paid_at!));
+  const receipts: Receipt[] = paidWithPatient.map((t, i) => {
+    const pt = patients.find((x) => x.id === t.patient_id)!;
+    const g = pt.guardians[0];
+    const ref = t.due_date.slice(0, 7);
+    return {
+      id: uid(), number: i + 1, transaction_id: t.id, patient_id: pt.id, issue_date: t.paid_at!, amount: t.amount,
+      payer_name: g.name, payer_cpf: g.cpf ?? "", payer_city: pt.address?.city ?? "", payer_state: pt.address?.state ?? "", payer_email: g.email ?? "",
+      description: "Consultas neuropsicopedagógicas (intervenção), com duração de 45 minutos, realizadas nas datas de:",
+      service_dates: appointments.filter((a) => a.patient_id === pt.id && a.starts_at.slice(0, 7) === ref && a.status !== "cancelado").map((a) => iso(new Date(a.starts_at))).sort(),
+    };
+  });
+
   const activities: Activity[] = ACTIVITY_LIBRARY.map((a, i) => ({ ...a, id: uid(), favorite: i < 3 }));
 
   const reports: Report[] = [];
@@ -203,15 +222,19 @@ export function buildSeed() {
     ];
   });
 
+  // Perfil de demonstração com os dados públicos de contato da identidade visual.
+  // CPF fica em branco de propósito: preencha em Configurações (não versionamos documentos pessoais).
   const profile: Profile = {
-    id: "demo", professional_name: "Dra. Camila Souza", clinic_name: "Espaço Aprender", profession: "Neuropsicopedagoga",
-    crnpp: "0000/SP", document: "000.000.000-00", pix_key: "camila@exemplo.com", phone: "(11) 90000-0000",
-    email: "contato@exemplo.com", address: "Rua das Flores, 100 — São Paulo/SP", default_session_value: 180,
-    work_start: "08:00", work_end: "19:00", session_minutes: 50, templates: DEFAULT_TEMPLATES,
+    id: "demo", professional_name: "Larissa Rodrigues Bueno", clinic_name: "Larissa Bueno", profession: "Neuropsicopedagoga",
+    signature_title: "Professora e Neuropsicopedagoga", cbo: "2394-40", crnpp: "", document: "",
+    pix_key: "", phone: "(47) 9 9692-1817", whatsapp: "(47) 9 9692-1817", instagram: "@npp.larissabueno",
+    email: "larissabuenopedagoga@gmail.com", address: "Rua 500, nº 550, Centro, Balneário Camboriú - SC",
+    city: "Balneário Camboriú", state: "SC", default_session_value: 180,
+    work_start: "08:00", work_end: "19:00", session_minutes: 45, templates: DEFAULT_TEMPLATES,
   };
 
   return {
     patients, assessments, intervention_plans: plans, appointments, session_records: sessions,
-    activities, documents: [], transactions, reports, profile, instruments, assessment_records,
+    activities, documents: [], transactions, reports, profile, instruments, assessment_records, receipts,
   };
 }

@@ -6,6 +6,8 @@ import { Plus, Search, Users } from "lucide-react";
 import { Avatar, Badge, Button, Card, EmptyState, Input, PageHeader, Segmented, Spinner } from "@/components/ui";
 import { PatientForm } from "@/components/patients/patient-form";
 import { useCollection, useData } from "@/lib/data/provider";
+import { createContract } from "@/lib/documents";
+import { useRouter } from "next/navigation";
 import type { Patient } from "@/lib/types";
 import { ageLabel } from "@/lib/utils";
 
@@ -20,6 +22,8 @@ function PatientPhoto({ p }: { p: Patient }) {
 
 function PatientsInner() {
   const params = useSearchParams();
+  const router = useRouter();
+  const { store, profile, bump } = useData();
   const { data, loading, insert } = useCollection("patients", { orderBy: "name", ascending: true });
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"ativo" | "todos" | "inativo" | "alta">("ativo");
@@ -79,7 +83,13 @@ function PatientsInner() {
         </div>
       )}
 
-      <PatientForm open={open} onClose={() => setOpen(false)} onSave={(v) => insert(v)} />
+      <PatientForm open={open} onClose={() => setOpen(false)} onSave={async (v) => {
+        const p = await insert(v);
+        // Contrato gerado automaticamente com os dados do cadastro (rascunho editável)
+        const contract = await createContract(store, p, profile);
+        bump("reports");
+        router.push(`/pacientes/${p.id}?contrato=${contract.id}`);
+      }} />
     </>
   );
 }

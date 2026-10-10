@@ -2,13 +2,13 @@
 import { useEffect, useState } from "react";
 import { Camera, Plus, Trash2 } from "lucide-react";
 import { Avatar, Button, Field, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
-import type { Guardian, Patient } from "@/lib/types";
+import type { Address, Guardian, Patient } from "@/lib/types";
 import { useData } from "@/lib/data/provider";
 import { ageLabel } from "@/lib/utils";
 
 const empty: Partial<Patient> = {
   name: "", guardians: [{ name: "", relation: "Mãe", phone: "" }], payment_type: "particular", status: "ativo",
-  weekly_frequency: 1, anamnesis: {},
+  weekly_frequency: 1, anamnesis: {}, address: {},
 };
 
 export function PatientForm({
@@ -22,12 +22,13 @@ export function PatientForm({
 
   useEffect(() => {
     if (!open) return;
-    setF(initial ? { ...initial } : { ...empty, session_value: profile?.default_session_value ?? 0 });
+    setF(initial ? { ...initial, address: initial.address ?? {} } : { ...empty, session_value: profile?.default_session_value ?? 0 });
     setPhotoPreview(null);
     if (initial?.photo_url) store.fileUrl(initial.photo_url).then(setPhotoPreview).catch(() => {});
   }, [open, initial, profile, store]);
 
   const set = <K extends keyof Patient>(k: K, v: Patient[K]) => setF((s) => ({ ...s, [k]: v }));
+  const setAddress = (patch: Partial<Address>) => set("address", { ...(f.address ?? {}), ...patch });
   const setGuardian = (i: number, patch: Partial<Guardian>) =>
     set("guardians", (f.guardians ?? []).map((g, j) => (j === i ? { ...g, ...patch } : g)));
 
@@ -98,18 +99,39 @@ export function PatientForm({
               <Plus className="h-3.5 w-3.5" /> Adicionar
             </Button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {(f.guardians ?? []).map((g, i) => (
-              <div key={i} className="grid gap-2 sm:grid-cols-[1.4fr_0.8fr_1fr_1.2fr_auto]">
-                <Input placeholder="Nome" value={g.name} onChange={(e) => setGuardian(i, { name: e.target.value })} />
-                <Input placeholder="Parentesco" value={g.relation} onChange={(e) => setGuardian(i, { relation: e.target.value })} />
-                <Input placeholder="Telefone" value={g.phone} onChange={(e) => setGuardian(i, { phone: e.target.value })} />
-                <Input placeholder="E-mail" type="email" value={g.email ?? ""} onChange={(e) => setGuardian(i, { email: e.target.value })} />
-                <Button type="button" variant="ghost" size="sm" className="h-9" onClick={() => set("guardians", (f.guardians ?? []).filter((_, j) => j !== i))} aria-label="Remover responsável">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <div key={i} className={i === 0 ? "rounded-xl border border-brand-100 bg-brand-50/40 p-3" : ""}>
+                {i === 0 && <p className="mb-2 text-[11px] font-medium text-brand-700">Responsável contratante — dados usados no contrato e no recibo</p>}
+                <div className="grid gap-2 sm:grid-cols-[1.4fr_0.8fr_1fr_1.2fr_auto]">
+                  <Input placeholder="Nome" value={g.name} onChange={(e) => setGuardian(i, { name: e.target.value })} />
+                  <Input placeholder="Parentesco" value={g.relation} onChange={(e) => setGuardian(i, { relation: e.target.value })} />
+                  <Input placeholder="Telefone" value={g.phone} onChange={(e) => setGuardian(i, { phone: e.target.value })} />
+                  <Input placeholder="E-mail" type="email" value={g.email ?? ""} onChange={(e) => setGuardian(i, { email: e.target.value })} />
+                  <Button type="button" variant="ghost" size="sm" className="h-9" onClick={() => set("guardians", (f.guardians ?? []).filter((_, j) => j !== i))} aria-label="Remover responsável">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                {i === 0 && (
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <Input placeholder="CPF" inputMode="numeric" value={g.cpf ?? ""} onChange={(e) => setGuardian(i, { cpf: e.target.value })} />
+                    <Input placeholder="RG" value={g.rg ?? ""} onChange={(e) => setGuardian(i, { rg: e.target.value })} />
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        </section>
+
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Endereço do responsável</h4>
+          <div className="grid gap-2 sm:grid-cols-6">
+            <Input className="sm:col-span-3" placeholder="Rua" value={f.address?.street ?? ""} onChange={(e) => setAddress({ street: e.target.value })} />
+            <Input placeholder="Número" value={f.address?.number ?? ""} onChange={(e) => setAddress({ number: e.target.value })} />
+            <Input className="sm:col-span-2" placeholder="Bairro" value={f.address?.district ?? ""} onChange={(e) => setAddress({ district: e.target.value })} />
+            <Input className="sm:col-span-3" placeholder="Cidade" value={f.address?.city ?? ""} onChange={(e) => setAddress({ city: e.target.value })} />
+            <Input placeholder="UF" maxLength={2} value={f.address?.state ?? ""} onChange={(e) => setAddress({ state: e.target.value.toUpperCase() })} />
+            <Input className="sm:col-span-2" placeholder="CEP" inputMode="numeric" value={f.address?.zip ?? ""} onChange={(e) => setAddress({ zip: e.target.value })} />
           </div>
         </section>
 
@@ -127,14 +149,15 @@ export function PatientForm({
           <Field label="Hipóteses diagnósticas"><Input value={f.hypotheses ?? ""} onChange={(e) => set("hypotheses", e.target.value)} /></Field>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <Field label="Atendimento">
             <Select value={f.payment_type} onChange={(e) => set("payment_type", e.target.value as Patient["payment_type"])} options={[{ value: "particular", label: "Particular" }, { value: "convenio", label: "Convênio" }]} />
           </Field>
           {f.payment_type === "convenio" && (
             <Field label="Convênio"><Input value={f.insurance_name ?? ""} onChange={(e) => set("insurance_name", e.target.value)} /></Field>
           )}
-          <Field label="Valor da sessão (R$)"><Input type="number" min={0} step="0.01" value={f.session_value ?? 0} onChange={(e) => set("session_value", Number(e.target.value))} /></Field>
+          <Field label="Sessão de avaliação (R$)"><Input type="number" min={0} step="0.01" value={f.assessment_value ?? 0} onChange={(e) => set("assessment_value", Number(e.target.value))} /></Field>
+          <Field label="Sessão de intervenção (R$)"><Input type="number" min={0} step="0.01" value={f.session_value ?? 0} onChange={(e) => set("session_value", Number(e.target.value))} /></Field>
           <Field label="Sessões/semana"><Input type="number" min={0} max={7} value={f.weekly_frequency ?? 1} onChange={(e) => set("weekly_frequency", Number(e.target.value))} /></Field>
           <Field label="Data de início"><Input type="date" value={f.start_date ?? ""} onChange={(e) => set("start_date", e.target.value)} /></Field>
           <Field label="Status">

@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, FileDown, FileSpreadsheet, Pencil, Plus, Receipt, Trash2, Wand2 } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Input, Modal, PageHeader, Segmented, Select, Spinner, useToast } from "@/components/ui";
 import { BarChart } from "@/components/charts";
+import { ReceiptsList } from "@/components/finance/receipts-list";
 import { useCollection, useData } from "@/lib/data/provider";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/catalog";
 import { txStatus } from "@/lib/labels";
@@ -157,8 +158,17 @@ function FinanceInner() {
 
   async function markPaid(t: Transaction) {
     await txs.update(t.id, { paid_at: today() });
-    toast("Pagamento registrado");
+    toast("Pagamento registrado — recibo emitido");
   }
+
+  // Resumo por paciente no mês selecionado
+  const byPatient = patients.data
+    .map((p) => {
+      const own = billed.filter((t) => t.patient_id === p.id);
+      return { p, pago: own.filter((t) => t.paid_at).reduce((s, t) => s + Number(t.amount), 0), aberto: own.filter((t) => !t.paid_at).reduce((s, t) => s + Number(t.amount), 0) };
+    })
+    .filter((x) => x.pago || x.aberto)
+    .sort((a, b) => b.pago + b.aberto - (a.pago + a.aberto));
 
   if (txs.loading) return <Spinner />;
 
@@ -182,8 +192,8 @@ function FinanceInner() {
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
-          ["Receitas recebidas", money(received), "text-ink"],
-          ["Despesas pagas", money(expenses), "text-ink"],
+          ["Entradas recebidas", money(received), "text-ink"],
+          ["Saídas pagas", money(expenses), "text-ink"],
           ["Lucro", money(received - expenses), received - expenses >= 0 ? "text-emerald-700" : "text-red-600"],
           ["A receber (mês)", money(pendingMonth), "text-ink"],
           ["Inadimplência (geral)", `${delinquency}% · ${money(overdueTotal)}`, overdueTotal ? "text-red-600" : "text-ink"],
@@ -197,9 +207,9 @@ function FinanceInner() {
 
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Faturamento mensal" subtitle="Valores efetivamente pagos, últimos 6 meses" />
+          <CardHeader title="Entradas e saídas" subtitle="Valores efetivamente pagos, últimos 6 meses" />
           <div className="p-5">
-            <BarChart data={chart} xKey="x" series={[{ key: "receitas", label: "Receitas" }, { key: "despesas", label: "Despesas" }]} format={compact} />
+            <BarChart data={chart} xKey="x" series={[{ key: "receitas", label: "Entradas" }, { key: "despesas", label: "Saídas" }]} format={compact} />
           </div>
         </Card>
         <Card>
@@ -259,6 +269,27 @@ function FinanceInner() {
           </div>
         )}
       </Card>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader title={`Por paciente — ${monthLabel}`} subtitle="Cobranças com vencimento no mês" />
+          {byPatient.length === 0 ? <EmptyState title="Sem cobranças no mês" /> : (
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs text-ink-faint"><tr><th className="px-5 py-2 font-medium">Paciente</th><th className="px-2 py-2 text-right font-medium">Pago</th><th className="px-5 py-2 text-right font-medium">Em aberto</th></tr></thead>
+              <tbody className="divide-y divide-line">
+                {byPatient.map(({ p, pago, aberto }) => (
+                  <tr key={p.id}>
+                    <td className="px-5 py-2"><a className="hover:underline" href={`/pacientes/${p.id}?tab=financeiro`}>{p.name}</a></td>
+                    <td className="px-2 py-2 text-right tabular-nums text-emerald-700">{money(pago)}</td>
+                    <td className={`px-5 py-2 text-right tabular-nums ${aberto ? "text-red-600" : "text-ink-faint"}`}>{money(aberto)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+        <div className="no-print"><ReceiptsList limit={8} /></div>
+      </div>
 
       <TxModal open={Boolean(modal)} onClose={() => setModal(null)} initial={modal}
         onSave={async (t) => { if (t.id) await txs.update(t.id, t); else await txs.insert({ type: "receita", ...t }); toast("Lançamento salvo"); }} />
