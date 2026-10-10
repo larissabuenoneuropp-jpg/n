@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { deny, guard, trimMsg } from "@/lib/server/guard";
+import { deny, guard, tooLarge, trimMsg } from "@/lib/server/guard";
 
 export const runtime = "nodejs";
 
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
   }
   const g = await guard(req, { bucket: "messages", limit: 30 });
   if (!g.ok) return g.response;
+  if (tooLarge(req, 20_000)) return deny(413, "Mensagem grande demais");
 
   const body = parseBody(await req.json().catch(() => null));
   if (!body) return deny(400, "Dados da mensagem inválidos");

@@ -27,3 +27,20 @@ jobs:
         run: npm audit --omit=dev --audit-level=moderate
       - name: Dependências de build (informativo)
         run: npm audit --audit-level=critical || true
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migrações e regras de segurança (RLS, mass assignment, acesso anônimo)
+        run: scripts/test-db.sh
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres

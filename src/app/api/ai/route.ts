@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { SYSTEM_PROMPT, TASK_INSTRUCTIONS, type AiTask } from "@/lib/ai/prompts";
 import { mockResponse } from "@/lib/ai/mock";
 import { isPersonalMode, isSupabaseConfigured } from "@/lib/supabase/config";
-import { deny, guard, personalServerLocked } from "@/lib/server/guard";
+import { deny, guard, personalServerLocked, tooLarge, withConcurrency } from "@/lib/server/guard";
 
 export const runtime = "nodejs";
 
@@ -11,6 +11,7 @@ const MAX_INPUT_CHARS = 24_000;
 export async function POST(req: Request) {
   const g = await guard(req, { bucket: "ai", limit: 20 });
   if (!g.ok) return g.response;
+  if (tooLarge(req, 200_000)) return deny(413, "Conteúdo muito longo para análise.");
 
   let body: { task?: AiTask; input?: Record<string, unknown> };
   try {
@@ -41,10 +42,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ demo: true, result: mockResponse(task, body.input ?? {}) });
   }
 
+  return withConcurrency("openai", 4, () => callOpenAI(apiKey, task, inputText), () => deny(429, "A IA está ocupada com outras solicitações. Tente em alguns segundos."));
+}
+
+async function callOpenAI(apiKey: string, task: AiTask, inputText: string) {
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(60_000),
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || "gpt-4o-mini",
         response_format: { type: "json_object" },
