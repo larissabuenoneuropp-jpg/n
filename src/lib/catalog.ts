@@ -1,32 +1,11 @@
 // Catálogos de referência. A profissional pode adicionar itens livremente.
 
-export interface InstrumentInfo {
-  name: string;
-  full: string;
-  domain: string;
-  /** Instrumentos que, até onde sabemos, são de uso privativo de psicólogos (SATEPSI/CFP).
-   *  A situação pode mudar — confirme sempre no SATEPSI antes de planejar o uso. */
-  restricted?: boolean;
-}
+import { INSTRUMENT_LIBRARY } from "./data/instruments-library";
 
-export const INSTRUMENTS: InstrumentInfo[] = [
-  { name: "CARS", full: "Childhood Autism Rating Scale", domain: "Rastreio TEA / comportamento" },
-  { name: "M-CHAT", full: "Modified Checklist for Autism in Toddlers", domain: "Rastreio TEA (primeira infância)" },
-  { name: "SNAP-IV", full: "Questionário SNAP-IV (pais/professores)", domain: "Desatenção / hiperatividade / oposição" },
-  { name: "IAR", full: "Instrumento de Avaliação do Repertório Básico para Alfabetização", domain: "Pré-requisitos de alfabetização" },
-  { name: "CONFIAS", full: "Consciência Fonológica: Instrumento de Avaliação Sequencial", domain: "Consciência fonológica" },
-  { name: "PROLEC", full: "Provas de Avaliação dos Processos de Leitura", domain: "Leitura" },
-  { name: "PROESC", full: "Avaliação dos Processos de Escrita", domain: "Escrita" },
-  { name: "TAC", full: "Teste de Atenção por Cancelamento", domain: "Atenção" },
-  { name: "Trilhas", full: "Teste de Trilhas", domain: "Flexibilidade cognitiva / atenção alternada" },
-  { name: "Torre de Londres", full: "Torre de Londres", domain: "Planejamento / funções executivas" },
-  { name: "Cubos de Corsi", full: "Blocos de Corsi", domain: "Memória operacional visuoespacial" },
-  { name: "EOCA", full: "Entrevista Operativa Centrada na Aprendizagem", domain: "Modalidade de aprendizagem" },
-  { name: "Provas Operatórias", full: "Provas Operatórias Piagetianas", domain: "Pensamento lógico / nível operatório" },
-  { name: "BPA", full: "Bateria Psicológica para Avaliação da Atenção", domain: "Atenção", restricted: true },
-  { name: "WISC", full: "Escala Wechsler de Inteligência para Crianças", domain: "Inteligência", restricted: true },
-  { name: "SON-R", full: "Teste Não-Verbal de Inteligência SON-R", domain: "Inteligência não verbal", restricted: true },
-];
+/** Lista de nomes/descrições para sugestões rápidas (a biblioteca completa fica na tabela "instruments"). */
+export const INSTRUMENTS = INSTRUMENT_LIBRARY.map((i) => ({
+  name: i.name, full: i.full_name, domain: i.area, restricted: i.access === "psicologo",
+}));
 
 export const AREAS = [
   "Alfabetização", "Funções Executivas", "Memória", "Linguagem", "Leitura", "Escrita",

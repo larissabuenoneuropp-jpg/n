@@ -68,7 +68,7 @@ function PatientsInner() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate font-medium">{p.name}</p>
-                    <Badge tone={p.payment_type === "convenio" ? "lilac" : "blue"}>{p.payment_type === "convenio" ? p.insurance_name || "Convênio" : "Particular"}</Badge>
+                    <Badge tone={p.payment_type === "convenio" ? "sage" : "blue"}>{p.payment_type === "convenio" ? p.insurance_name || "Convênio" : "Particular"}</Badge>
                   </div>
                   <p className="text-xs text-ink-faint">{ageLabel(p.birth_date)}{p.grade ? ` · ${p.grade}` : ""}</p>
                   <p className="mt-2 line-clamp-2 text-xs text-ink-soft">{p.diagnosis || p.hypotheses || "Sem diagnóstico/hipótese registrada"}</p>

@@ -116,7 +116,7 @@ export default function DashboardPage() {
                 return (
                   <li key={a.id} className="flex items-center gap-3 px-5 py-3">
                     <div className="w-14 shrink-0 text-sm font-medium tabular-nums">{formatTime(a.starts_at)}</div>
-                    <div className={`h-9 w-1 rounded-full ${a.kind === "bloqueio" ? "bg-slate-200" : a.kind === "avaliacao" ? "bg-lilac-400" : "bg-brand-400"}`} />
+                    <div className={`h-9 w-1 rounded-full ${a.kind === "bloqueio" ? "bg-slate-200" : a.kind === "avaliacao" ? "bg-sage-400" : "bg-brand-400"}`} />
                     <div className="min-w-0 flex-1">
                       {p ? (
                         <Link href={`/pacientes/${p.id}`} className="truncate text-sm font-medium hover:underline">{p.name}</Link>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
                     <p className="truncate text-xs text-ink-faint">{a.title}</p>
                     <div className="mt-2 flex items-center gap-2">
                       <div className="h-1.5 flex-1 rounded-full bg-slate-100">
-                        <div className="h-1.5 rounded-full bg-lilac-400" style={{ width: `${pct}%` }} />
+                        <div className="h-1.5 rounded-full bg-sage-400" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-[11px] tabular-nums text-ink-faint">{done}/{a.instruments.length}</span>
                     </div>
@@ -222,7 +222,7 @@ export default function DashboardPage() {
                       <span className="text-xs text-ink-faint">
                         {formatDate(p.birth_date, { day: "2-digit", month: "2-digit" })} · faz {now.getFullYear() - parseDate(p.birth_date!).getFullYear()} anos
                       </span>
-                      {isToday && <Badge tone="lilac">Hoje!</Badge>}
+                      {isToday && <Badge tone="sage">Hoje!</Badge>}
                     </li>
                   );
                 })}

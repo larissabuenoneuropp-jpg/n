@@ -1,8 +1,9 @@
 import type {
-  Activity, Appointment, Assessment, InterventionPlan, Patient, Profile, Report, SessionRecord, Transaction,
+  Activity, Appointment, Assessment, AssessmentRecord, Instrument, InterventionPlan, Patient, Profile, Report, SessionRecord, Transaction,
 } from "@/lib/types";
 import { addDays, toISODate, uid } from "@/lib/utils";
 import { ACTIVITY_LIBRARY } from "./activities-library";
+import { INSTRUMENT_LIBRARY } from "./instruments-library";
 import { DEFAULT_TEMPLATES } from "@/lib/templates";
 
 /** Dados fictícios para o modo demonstração. */
@@ -178,6 +179,30 @@ export function buildSeed() {
 
   const reports: Report[] = [];
 
+  const instruments: Instrument[] = INSTRUMENT_LIBRARY.map((i) => ({ ...i, id: uid(), favorite: false }));
+  const confias = instruments.find((i) => i.name === "CONFIAS")!;
+  const corsi = instruments.find((i) => i.name === "Cubos de Corsi")!;
+  // Lucas: aplicações inicial e reavaliações para demonstrar a quantificação da evolução
+  const assessment_records: AssessmentRecord[] = [
+    { phase: "inicial" as const, m: 4, s: 6, f: 3, d: 3, i: 2 },
+    { phase: "intermediaria" as const, m: 2, s: 8, f: 6, d: 4, i: 2 },
+    { phase: "reavaliacao" as const, m: 0, s: 10, f: 9, d: 5, i: 3 },
+  ].flatMap((r): AssessmentRecord[] => {
+    const date = (() => { const d = new Date(now); d.setMonth(d.getMonth() - r.m); return iso(d); })();
+    return [
+      {
+        id: uid(), patient_id: p1, instrument_id: confias.id, instrument_name: "CONFIAS", date, phase: r.phase,
+        scores: { silaba: r.s, fonema: r.f, total: r.s + r.f }, ai_assisted: false,
+        behavior: r.phase === "inicial" ? "Inseguro, pedia confirmação a cada item." : "Mais autônomo, autocorrige-se.",
+        clinical_record: `${{ inicial: "Avaliação inicial", intermediaria: "Aplicação intermediária", reavaliacao: "Reavaliação" }[r.phase]}: desempenho no nível da sílaba (${r.s}) e do fonema (${r.f}).`,
+      },
+      {
+        id: uid(), patient_id: p1, instrument_id: corsi.id, instrument_name: "Cubos de Corsi", date, phase: r.phase,
+        scores: { span_direto: r.d, span_inverso: r.i }, clinical_record: `Span direto ${r.d}, inverso ${r.i}.`,
+      },
+    ];
+  });
+
   const profile: Profile = {
     id: "demo", professional_name: "Dra. Camila Souza", clinic_name: "Espaço Aprender", profession: "Neuropsicopedagoga",
     crnpp: "0000/SP", document: "000.000.000-00", pix_key: "camila@exemplo.com", phone: "(11) 90000-0000",
@@ -187,6 +212,6 @@ export function buildSeed() {
 
   return {
     patients, assessments, intervention_plans: plans, appointments, session_records: sessions,
-    activities, documents: [], transactions, reports, profile,
+    activities, documents: [], transactions, reports, profile, instruments, assessment_records,
   };
 }

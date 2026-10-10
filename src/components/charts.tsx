@@ -3,10 +3,11 @@ import { useState } from "react";
 import { Segmented } from "@/components/ui";
 
 /**
- * Gráficos leves em SVG. Paleta categórica validada (CVD e visão normal) — ordem fixa.
- * Cores com contraste < 3:1 (aqua, amarelo) sempre acompanham legenda e visão em tabela.
+ * Gráficos leves em SVG. Paleta categórica derivada da identidade visual (terracota, azul-água,
+ * mostarda, ameixa), validada para daltonismo e visão normal — ordem fixa.
+ * A mostarda tem contraste < 3:1, por isso todo gráfico tem legenda e visão em tabela.
  */
-export const SERIES_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"];
+export const SERIES_COLORS = ["#b5663f", "#00909a", "#c9961a", "#8d5aa0"];
 
 export interface Series {
   key: string;
@@ -102,15 +103,15 @@ export function BarChart(props: ChartProps) {
         <svg viewBox={`0 0 ${W} ${height}`} className="w-full" role="img" aria-label={series.map((s) => s.label).join(" e ")}>
           {ticks.map((t) => (
             <g key={t}>
-              <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="#eef0f4" />
-              <text x={PAD.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="10" fill="#8b91a1">{format(t)}</text>
+              <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="#f1ebe3" />
+              <text x={PAD.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="10" fill="#8f847b">{format(t)}</text>
             </g>
           ))}
           {data.map((d, i) => {
             const gx = PAD.l + i * group + (group - (barW * series.length + gap * (series.length - 1))) / 2;
             return (
               <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-                <rect x={PAD.l + i * group} y={PAD.t} width={group} height={ih} fill={hover === i ? "#f4f6fb" : "transparent"} />
+                <rect x={PAD.l + i * group} y={PAD.t} width={group} height={ih} fill={hover === i ? "#f8f2ec" : "transparent"} />
                 {series.map((s, j) => {
                   const v = Number(d[s.key] ?? 0);
                   const h = Math.max(0, PAD.t + ih - y(v));
@@ -120,11 +121,11 @@ export function BarChart(props: ChartProps) {
                   const path = `M${x},${PAD.t + ih} V${PAD.t + ih - h + r} Q${x},${PAD.t + ih - h} ${x + r},${PAD.t + ih - h} H${x + barW - r} Q${x + barW},${PAD.t + ih - h} ${x + barW},${PAD.t + ih - h + r} V${PAD.t + ih} Z`;
                   return h > 0 ? <path key={s.key} d={path} fill={SERIES_COLORS[j]} /> : null;
                 })}
-                <text x={PAD.l + i * group + group / 2} y={height - 6} textAnchor="middle" fontSize="10" fill="#8b91a1">{d[xKey]}</text>
+                <text x={PAD.l + i * group + group / 2} y={height - 6} textAnchor="middle" fontSize="10" fill="#8f847b">{d[xKey]}</text>
               </g>
             );
           })}
-          <line x1={PAD.l} x2={W - PAD.r} y1={PAD.t + ih} y2={PAD.t + ih} stroke="#d9dce4" />
+          <line x1={PAD.l} x2={W - PAD.r} y1={PAD.t + ih} y2={PAD.t + ih} stroke="#ddd2c4" />
         </svg>
         {hover !== null && (
           <div
@@ -173,16 +174,16 @@ export function LineChart(props: ChartProps) {
         >
           {ticks.map((t) => (
             <g key={t}>
-              <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="#eef0f4" />
-              <text x={PAD.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="10" fill="#8b91a1">{format(t)}</text>
+              <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="#f1ebe3" />
+              <text x={PAD.l - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="10" fill="#8f847b">{format(t)}</text>
             </g>
           ))}
           {data.map((d, i) => (
-            <text key={i} x={x(i)} y={height - 6} textAnchor="middle" fontSize="10" fill="#8b91a1">
+            <text key={i} x={x(i)} y={height - 6} textAnchor="middle" fontSize="10" fill="#8f847b">
               {data.length > 10 && i % Math.ceil(data.length / 8) !== 0 ? "" : d[xKey]}
             </text>
           ))}
-          {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={PAD.t + ih} stroke="#c9cdd8" strokeDasharray="3 3" />}
+          {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={PAD.t + ih} stroke="#cdbfae" strokeDasharray="3 3" />}
           {series.map((s, j) => {
             const pts = data.map((d, i) => (d[s.key] === undefined ? null : [x(i), y(Number(d[s.key]))] as const)).filter(Boolean) as Array<readonly [number, number]>;
             return (
@@ -194,7 +195,7 @@ export function LineChart(props: ChartProps) {
               </g>
             );
           })}
-          <line x1={PAD.l} x2={W - PAD.r} y1={PAD.t + ih} y2={PAD.t + ih} stroke="#d9dce4" />
+          <line x1={PAD.l} x2={W - PAD.r} y1={PAD.t + ih} y2={PAD.t + ih} stroke="#ddd2c4" />
         </svg>
         {hover !== null && data[hover] && (
           <div

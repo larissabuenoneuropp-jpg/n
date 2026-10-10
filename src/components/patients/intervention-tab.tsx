@@ -2,13 +2,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CalendarRange, Check, ChevronDown, ChevronUp, FileText, Plus, Save, Sparkles, Target, Trash2 } from "lucide-react";
+import { BookOpen, CalendarRange, Check, ChevronDown, ChevronUp, FileText, Plus, Save, Sparkles, Target, Trash2 } from "lucide-react";
 import {
   AiNotice, Badge, Button, Card, CardHeader, EmptyState, Field, Input, ListEditor, Modal, Select, Spinner, Textarea, useToast,
 } from "@/components/ui";
 import { useCollection } from "@/lib/data/provider";
 import { askAI, patientContext } from "@/lib/ai/client";
-import type { Assessment, InterventionPlan, Patient, PlannedSession } from "@/lib/types";
+import type { Activity, Assessment, InterventionPlan, Patient, PlannedSession } from "@/lib/types";
 import { addDays, formatDate, parseDate, toISODate, today, uid } from "@/lib/utils";
 
 interface AiPlan {
@@ -140,8 +140,22 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
   );
 }
 
-function SessionCard({ s, onChange, onRemove }: { s: PlannedSession; onChange: (p: Partial<PlannedSession>) => void; onRemove: () => void }) {
+function SessionCard({ s, onChange, onRemove, onSuggest, activities }: {
+  s: PlannedSession; onChange: (p: Partial<PlannedSession>) => void; onRemove: () => void;
+  onSuggest: () => Promise<void>; activities: Activity[];
+}) {
   const [open, setOpen] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [picker, setPicker] = useState("");
+  const insertActivity = (id: string) => {
+    const a = activities.find((x) => x.id === id);
+    if (!a) return;
+    onChange({
+      activities: [s.activities, `${a.title} (${a.duration_min} min): ${a.steps.split("\n")[0] ?? ""}`].filter(Boolean).join("\n"),
+      materials: [s.materials, a.materials].filter(Boolean).join("; "),
+    });
+    setPicker("");
+  };
   return (
     <div className={`rounded-xl border ${s.done ? "border-emerald-200 bg-emerald-50/30" : "border-line bg-white"}`}>
       <div className="flex items-center gap-3 px-4 py-3">
@@ -156,6 +170,16 @@ function SessionCard({ s, onChange, onRemove }: { s: PlannedSession; onChange: (
       </div>
       {open && (
         <div className="grid gap-3 border-t border-line p-4 sm:grid-cols-2">
+          <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+            <Button variant="ai" size="sm" loading={suggesting} onClick={async () => { setSuggesting(true); await onSuggest().finally(() => setSuggesting(false)); }}>
+              <Sparkles className="h-3.5 w-3.5" /> Sugerir sessão com IA
+            </Button>
+            <div className="flex items-center gap-1.5">
+              <BookOpen className="h-4 w-4 text-ink-faint" />
+              <Select className="h-8 w-60 text-xs" value={picker} onChange={(e) => insertActivity(e.target.value)} placeholder="Inserir atividade da biblioteca…"
+                options={activities.map((a) => ({ value: a.id, label: `${a.favorite ? "★ " : ""}${a.title} · ${a.area}` }))} />
+            </div>
+          </div>
           <Field label="Objetivo" className="sm:col-span-2"><Input value={s.objective} onChange={(e) => onChange({ objective: e.target.value })} /></Field>
           <Field label="Atividades sugeridas"><Textarea value={s.activities} onChange={(e) => onChange({ activities: e.target.value })} /></Field>
           <Field label="Materiais"><Textarea value={s.materials} onChange={(e) => onChange({ materials: e.target.value })} /></Field>
@@ -171,9 +195,34 @@ function SessionCard({ s, onChange, onRemove }: { s: PlannedSession; onChange: (
   );
 }
 
-function PlanEditor({ plan, onSave, onDelete }: { plan: InterventionPlan; onSave: (p: Partial<InterventionPlan>) => Promise<void>; onDelete: () => void }) {
+function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPlan; patient: Patient; onSave: (p: Partial<InterventionPlan>) => Promise<void>; onDelete: () => void }) {
+  const toast = useToast();
   const [f, setF] = useState(plan);
   const [saving, setSaving] = useState(false);
+  const activities = useCollection("activities", { orderBy: "title", ascending: true });
+
+  async function suggestSession(s: PlannedSession) {
+    try {
+      const age = patientContext(patient);
+      const r = await askAI<Partial<PlannedSession>>("plan_session", {
+        ...age, objetivo: s.objective || undefined, objetivo_geral_do_plano: f.general_objective,
+        objetivos_especificos: f.specific_objectives.map((o) => o.text), numero_da_sessao: s.number,
+        sessoes_anteriores: f.schedule.filter((x) => x.number < s.number).slice(-3).map((x) => ({ objetivo: x.objective, registro: x.record })),
+        biblioteca: activities.data.filter((a) => a.favorite).slice(0, 15).map((a) => ({ titulo: a.title, area: a.area, objetivos: a.objectives })),
+      });
+      const { objective, activities: acts, materials, duration_min, strategies, success_criteria } = r.result;
+      setF((cur) => ({
+        ...cur,
+        schedule: cur.schedule.map((x) => (x.id === s.id ? {
+          ...x, objective: objective || x.objective, activities: acts ?? x.activities, materials: materials ?? x.materials,
+          duration_min: duration_min ?? x.duration_min, strategies: strategies ?? x.strategies, success_criteria: success_criteria ?? x.success_criteria,
+        } : x)),
+      }));
+      toast(r.demo ? "Sugestão de exemplo inserida (modo demonstração) — revise e salve" : "Sugestão inserida — revise e salve o plano");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Erro na IA", "error");
+    }
+  }
   useEffect(() => setF(plan), [plan]);
   const done = f.schedule.filter((s) => s.done).length;
   const pct = f.schedule.length ? Math.round((done / f.schedule.length) * 100) : 0;
@@ -191,7 +240,7 @@ function PlanEditor({ plan, onSave, onDelete }: { plan: InterventionPlan; onSave
           </div>
         }
       />
-      <div className="h-1 bg-slate-100"><div className="h-1 bg-gradient-to-r from-brand-400 to-lilac-400" style={{ width: `${pct}%` }} /></div>
+      <div className="h-1 bg-slate-100"><div className="h-1 bg-gradient-to-r from-brand-400 to-sage-400" style={{ width: `${pct}%` }} /></div>
       <div className="space-y-6 p-5">
         <div className="grid gap-3 sm:grid-cols-4">
           <Field label="Título" className="sm:col-span-2"><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>
@@ -221,6 +270,8 @@ function PlanEditor({ plan, onSave, onDelete }: { plan: InterventionPlan; onSave
                 s={s}
                 onChange={(patch) => setF({ ...f, schedule: f.schedule.map((x) => (x.id === s.id ? { ...x, ...patch } : x)) })}
                 onRemove={() => setF({ ...f, schedule: f.schedule.filter((x) => x.id !== s.id).map((x, i) => ({ ...x, number: i + 1 })) })}
+                onSuggest={() => suggestSession(s)}
+                activities={activities.data}
               />
             ))}
           </div>
@@ -264,6 +315,7 @@ export function InterventionTab({ patient }: { patient: Patient }) {
       {current ? (
         <PlanEditor
           plan={current}
+          patient={patient}
           onSave={async (p) => { await plans.update(current.id, p); toast("Plano salvo"); }}
           onDelete={async () => { if (!confirm("Excluir este plano?")) return; await plans.remove(current.id); setSelected(null); }}
         />

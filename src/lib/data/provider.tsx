@@ -7,6 +7,7 @@ import type { DataStore, ListOptions } from "./store";
 import { SupabaseStore } from "./supabase-store";
 import { DemoStore } from "./demo-store";
 import { ACTIVITY_LIBRARY } from "./activities-library";
+import { INSTRUMENT_LIBRARY } from "./instruments-library";
 
 interface Ctx {
   store: DataStore;
@@ -41,6 +42,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (store.mode === "supabase") {
       store.list("activities").then((rows) => {
         if (rows.length === 0) store.insertMany("activities", ACTIVITY_LIBRARY.map((a) => ({ ...a, favorite: false })));
+      }).catch(() => {});
+      store.list("instruments").then((rows) => {
+        if (rows.length === 0) store.insertMany("instruments", INSTRUMENT_LIBRARY.map((i) => ({ ...i, favorite: false })));
       }).catch(() => {});
     }
   }, [store, refreshProfile]);

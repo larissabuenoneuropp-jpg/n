@@ -21,7 +21,7 @@ Sem as variáveis do Supabase, o app abre em **modo demonstração**: dados fict
 ### Produção (Supabase + OpenAI)
 
 1. Crie um projeto no [Supabase](https://supabase.com).
-2. No **SQL Editor**, execute `supabase/migrations/0001_init.sql` (cria tabelas, RLS, triggers de auditoria e o bucket privado `documents`).
+2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) e `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação).
 3. Em *Authentication › URL Configuration*, adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento.
 4. Preencha `.env.local`:
    ```
@@ -32,7 +32,14 @@ Sem as variáveis do Supabase, o app abre em **modo demonstração**: dados fict
    ```
 5. `npm run build && npm start` (ou deploy na Vercel com as mesmas variáveis).
 
-No primeiro acesso, a biblioteca de atividades é copiada para a conta da profissional.
+No primeiro acesso, as bibliotecas de atividades e de testes/protocolos são copiadas para a conta da profissional.
+
+### Identidade visual e fonte Neulis
+
+As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mostarda e azul-água). Os títulos usam a **Neulis**, que é uma fonte comercial e **não está incluída no projeto** — enquanto ela não for ativada, os títulos usam a Outfit (Google Fonts) como substituta. Para ativar:
+
+- **Adobe Fonts:** crie um kit Web com a Neulis e defina `NEXT_PUBLIC_ADOBE_FONTS_KIT=<id do kit>`. Confira no kit o nome CSS da família; o app tenta `Neulis`, `Neulis Sans`, `neulis-sans`, `Neulis Neue` e `neulis-neue`. Se o nome for outro, ajuste `fontFamily.display` em `tailwind.config.ts`.
+- **Arquivos próprios (se a licença permitir uso web):** coloque `Neulis-Regular/Medium/SemiBold.woff2` em `public/fonts/` e defina `NEXT_PUBLIC_NEULIS_SELF_HOSTED=1`.
 
 ---
 
@@ -42,7 +49,9 @@ No primeiro acesso, a biblioteca de atividades é copiada para a conta da profis
 |---|---|
 | **Dashboard** | Agenda do dia, próximos atendimentos, aniversariantes, pendências financeiras, avaliações em andamento, planos ativos, pacientes ativos, faturamento do mês, ocupação da agenda, atalhos rápidos |
 | **Pacientes** | Prontuário completo (foto, idade automática, responsáveis, escola, diagnóstico/hipóteses, convênio/particular, valor, frequência…) com abas: Informações gerais/anamnese · Avaliações · Plano de intervenção · Sessões e evolução · Documentos |
-| **Avaliações** | Objetivo, hipóteses, instrumentos (Planejado → Aplicado → Corrigido → No relatório), checklist, datas, anotações. **Plano de avaliação por IA** (instrumentos, ordem, nº de sessões, justificativa, objetivos por sessão) — tudo editável |
+| **Avaliações** | Objetivo, hipóteses, instrumentos (Planejado → Aplicado → Corrigido → No relatório), checklist, datas, anotações. **Plano de avaliação por IA** (instrumentos, ordem, nº de sessões, justificativa, objetivos por sessão) — tudo editável. Em cada instrumento: **roteiro de aplicação** e **registro clínico** com sugestão da IA, revisados antes de salvar no prontuário |
+| **Evolução quantitativa** | Pontuações de cada aplicação (inicial, intermediária, reavaliação) em gráfico e tabela com variação e leitura de melhora/piora conforme o sentido de cada medida |
+| **Testes e protocolos** | Biblioteca por área: o que avalia, quem pode aplicar (privativo de psicólogos / neuro e psicopedagogos / a confirmar), roteiro base e campos de pontuação personalizáveis |
 | **Plano de intervenção** | Objetivo geral, específicos, metas, critérios de evolução e **cronograma automático** de sessões (datas pela frequência semanal). Geração por IA considerando idade, diagnóstico, hipóteses, habilidades, dificuldades e perfis |
 | **Registro de sessões** | Todos os campos pedidos, escalas de progresso (1–5), anexos; ao salvar, a IA sugere próximo objetivo, atividades, estratégias, dificuldades, habilidades emergentes, alertas e encaminhamentos. Gráfico de evolução + **análise de padrões por IA** |
 | **Banco de atividades** | 24 atividades iniciais; filtros por idade, área, diagnóstico, nível, busca por habilidade; favoritos; cadastro próprio |
@@ -75,7 +84,8 @@ No primeiro acesso, a biblioteca de atividades é copiada para a conta da profis
 - **Confirmação automática e lembretes:** hoje são *semiautomáticos* — o sistema agenda o lembrete e gera um link de WhatsApp com a mensagem pronta; o envio é feito pela profissional. Envio 100% automático exige integração com WhatsApp Business API / e-mail transacional (não incluída).
 - **Backup automático:** depende do plano do Supabase (backups diários existem em planos pagos — verifique na documentação atual do Supabase). O app oferece exportação manual.
 - **Assinatura digital:** é uma imagem da assinatura nos PDFs; não é assinatura certificada ICP-Brasil.
-- **Instrumentos de avaliação:** WISC, BPA e SON-R estão sinalizados como possivelmente de uso privativo de psicólogos. Confirme a situação atual no SATEPSI/CFP.
+- **Testes e protocolos:** a classificação de quem pode aplicar é uma referência. WISC, BPA, SON-R, Bender e Figuras de Rey estão como privativos de psicólogos; vários itens estão como "a confirmar" por falta de certeza. Faixas etárias e subtestes não foram preenchidos: confira no manual e personalize. A lista oficial é a do SATEPSI/CFP.
+- **Roteiros por IA** são genéricos de organização da sessão: por regra, a IA não reproduz itens, instruções literais nem tabelas normativas (material protegido por direitos autorais).
 - **Criptografia de campo** (além da criptografia em repouso do provedor) não foi implementada; avaliar `pgsodium`/Vault para campos específicos.
 - Não há testes automatizados no repositório ainda (os fluxos foram verificados manualmente no navegador).
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.

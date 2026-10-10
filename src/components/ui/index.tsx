@@ -10,7 +10,7 @@ const variants: Record<Variant, string> = {
   secondary: "bg-white text-ink border border-line hover:bg-canvas",
   ghost: "text-ink-soft hover:bg-canvas hover:text-ink",
   danger: "bg-white text-red-600 border border-red-200 hover:bg-red-50",
-  ai: "bg-gradient-to-r from-brand-500 to-lilac-500 text-white hover:opacity-95 shadow-sm",
+  ai: "bg-sage-700 text-white hover:bg-sage-600 shadow-sm",
 };
 
 export const Button = forwardRef<
@@ -22,7 +22,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200",
         size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm",
         variants[variant],
         className,
@@ -41,11 +41,11 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 }
 export function CardHeader({ title, action, icon, subtitle }: { title: string; action?: React.ReactNode; icon?: React.ReactNode; subtitle?: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
       <div className="flex min-w-0 items-center gap-2">
         {icon && <span className="text-brand-500">{icon}</span>}
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-ink">{title}</h3>
+          <h3 className="truncate font-display text-sm font-semibold text-ink">{title}</h3>
           {subtitle && <p className="truncate text-xs text-ink-faint">{subtitle}</p>}
         </div>
       </div>
@@ -108,7 +108,8 @@ export function Field({ label, hint, children, className }: { label: string; hin
 const tones = {
   gray: "bg-slate-100 text-slate-600",
   blue: "bg-brand-50 text-brand-700",
-  lilac: "bg-lilac-100 text-lilac-600",
+  teal: "bg-teal-100 text-teal-600",
+  sage: "bg-sage-100 text-sage-600",
   green: "bg-emerald-50 text-emerald-700",
   amber: "bg-amber-50 text-amber-700",
   red: "bg-red-50 text-red-600",
@@ -126,7 +127,7 @@ export function Avatar({ name, src, size = 36 }: { name: string; src?: string | 
   }
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-lilac-200 font-semibold text-brand-800"
+      className="inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-sand-200 font-display font-semibold text-brand-800"
       style={{ width: size, height: size, fontSize: size * 0.36 }}
     >
       {initials(name)}
@@ -155,7 +156,7 @@ export function Modal({
         className={cn("flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-pop sm:rounded-2xl", wide ? "sm:max-w-3xl" : "sm:max-w-lg")}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h2 className="text-base font-semibold text-ink">{title}</h2>
+          <h2 className="font-display text-base font-semibold text-ink">{title}</h2>
           <button onClick={onClose} className="rounded-md p-1 text-ink-faint hover:bg-canvas hover:text-ink" aria-label="Fechar">
             <X className="h-4 w-4" />
           </button>
@@ -211,7 +212,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{title}</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink-soft">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -240,7 +241,7 @@ export function Spinner({ className }: { className?: string }) {
 
 export function AiNotice({ demo }: { demo?: boolean }) {
   return (
-    <p className="rounded-lg bg-lilac-50 px-3 py-2 text-[11px] leading-relaxed text-lilac-600">
+    <p className="rounded-lg bg-sage-50 px-3 py-2 text-[11px] leading-relaxed text-sage-700">
       Sugestão gerada por IA para apoio — revise e edite. Ela não substitui seu julgamento clínico.
       {demo && " (Modo demonstração: resposta de exemplo, configure a chave da OpenAI para respostas reais.)"}
     </p>

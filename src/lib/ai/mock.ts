@@ -75,6 +75,36 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
       };
     case "report_draft":
       return { text: "[MODO DEMONSTRAÇÃO] Configure OPENAI_API_KEY para gerar a redação. Texto de exemplo: durante o período avaliado, observou-se [completar]." };
+    case "application_guide": {
+      const name = String((input.instrumento as Record<string, unknown> | undefined)?.nome ?? "instrumento");
+      return {
+        preparation: ["Revisar o manual oficial e a folha de registro antes da sessão", "Organizar a sala com poucos estímulos visuais e sonoros", `Separar o material do ${name} na ordem de uso`],
+        materials: ["Kit/caderno oficial do instrumento", "Folha de respostas", "Lápis e borracha", "Cronômetro (se previsto no manual)"],
+        rapport: "Iniciar com conversa breve sobre interesses da criança e uma atividade lúdica curta para reduzir a ansiedade de desempenho.",
+        steps: ["Explicar a atividade em linguagem simples, sem antecipar respostas", "Aplicar os itens exatamente como descrito no manual", "Registrar respostas literais e tempo, quando previsto", "Oferecer pausas breves entre blocos, se necessário", "Encerrar com atividade agradável e devolutiva positiva à criança"],
+        observation_points: ["Compreensão das instruções", "Estratégias utilizadas", "Tempo de latência e fadiga", "Reações à dificuldade e ao erro"],
+        interruption_criteria: ["Seguir os critérios de suspensão do manual", "Interromper diante de sinais importantes de desregulação e retomar em outra sessão"],
+        adaptations: ["Ajustar apenas o ambiente e as pausas — não alterar itens ou instruções padronizadas"],
+        scoring_notes: "Corrigir conforme o manual e registrar a pontuação bruta antes de qualquer interpretação.",
+        caution: "[MODO DEMONSTRAÇÃO] Roteiro genérico de exemplo. Configure a OpenAI para um roteiro personalizado.",
+      };
+    }
+    case "clinical_record":
+      return {
+        record: "[MODO DEMONSTRAÇÃO] Na presente aplicação, a criança compreendeu as instruções com apoio inicial e manteve-se engajada durante a maior parte da tarefa. Os resultados registrados indicam [completar com a análise da profissional].",
+        highlights: ["Engajamento adequado", "Necessidade de apoio para iniciar a tarefa"],
+        comparison: "Comparação com aplicações anteriores: [completar].",
+        next_steps: ["Correlacionar com os demais instrumentos", "Considerar na definição dos objetivos do plano de intervenção"],
+      };
+    case "plan_session":
+      return {
+        objective: String(input.objetivo ?? "Objetivo da sessão"),
+        activities: "Aquecimento lúdico (5 min); atividade principal com apoio multissensorial (30 min); jogo de fechamento (10 min).",
+        materials: "Cartões ilustrados, alfabeto móvel, jogo de tabuleiro adaptado.",
+        duration_min: 50,
+        strategies: "Modelagem, pistas graduais, reforço positivo. [MODO DEMONSTRAÇÃO]",
+        success_criteria: "80% de acertos com apoio mínimo.",
+      };
     case "chat":
       return { answer: "[MODO DEMONSTRAÇÃO] Configure OPENAI_API_KEY para conversar com a assistente clínica." };
   }

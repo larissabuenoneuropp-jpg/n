@@ -1,0 +1,4 @@
+Coloque aqui os arquivos da fonte Neulis (licenciados por você), com estes nomes:
+  Neulis-Regular.woff2, Neulis-Medium.woff2, Neulis-SemiBold.woff2
+e defina NEXT_PUBLIC_NEULIS_SELF_HOSTED=1 no .env.local.
+Os arquivos de fonte não devem ser versionados se a licença não permitir redistribuição.

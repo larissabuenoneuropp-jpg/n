@@ -1,22 +1,17 @@
 "use client";
-import { useId } from "react";
 
+/** Marca do app nas cores da identidade visual (terracota, areia, sálvia, azul-água). */
 export function Logo({ compact }: { compact?: boolean }) {
-  const gid = useId();
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2.5">
       <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden>
-        <defs>
-          <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#5b6ef0" />
-            <stop offset="1" stopColor="#9a6cf5" />
-          </linearGradient>
-        </defs>
-        <rect width="32" height="32" rx="9" fill={`url(#${gid})`} />
-        <path d="M10 22V10l12 12V10" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <circle cx="22" cy="10" r="2" fill="white" />
+        <rect x="0" y="0" width="15" height="15" rx="4" fill="#cd926d" />
+        <rect x="17" y="0" width="15" height="15" rx="4" fill="#d2bda0" />
+        <rect x="0" y="17" width="15" height="15" rx="4" fill="#a7cbcb" />
+        <rect x="17" y="17" width="15" height="15" rx="4" fill="#979d84" />
+        <circle cx="24.5" cy="24.5" r="3" fill="#fff" opacity=".85" />
       </svg>
-      {!compact && <span className="text-[15px] font-semibold tracking-tight text-ink">NeuroPlanner</span>}
+      {!compact && <span className="font-display text-[15px] font-semibold tracking-tight text-ink">NeuroPlanner</span>}
     </div>
   );
 }

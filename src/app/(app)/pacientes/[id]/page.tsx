@@ -68,7 +68,7 @@ function PatientInner() {
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {patient.diagnosis && <Badge tone="blue">{patient.diagnosis}</Badge>}
-              {patient.hypotheses && <Badge tone="lilac">Hipótese: {patient.hypotheses}</Badge>}
+              {patient.hypotheses && <Badge tone="sage">Hipótese: {patient.hypotheses}</Badge>}
             </div>
           </div>
           <div className="flex gap-2">

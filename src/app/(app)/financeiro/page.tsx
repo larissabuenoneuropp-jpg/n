@@ -221,7 +221,7 @@ function FinanceInner() {
 
       <Card>
         <CardHeader title={`Lançamentos — ${monthLabel}`}
-          action={<div className="no-print flex gap-2">
+          action={<div className="no-print flex flex-wrap gap-2">
             <Segmented value={type} onChange={setType} options={[{ value: "todos", label: "Todos" }, { value: "receita", label: "Receitas" }, { value: "despesa", label: "Despesas" }]} />
             <Select className="h-8 w-32 text-xs" value={status} onChange={(e) => setStatus(e.target.value)} placeholder="Status" options={[{ value: "pago", label: "Pago" }, { value: "pendente", label: "Pendente" }, { value: "atrasado", label: "Atrasado" }]} />
           </div>} />

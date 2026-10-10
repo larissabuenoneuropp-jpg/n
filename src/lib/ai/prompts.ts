@@ -10,7 +10,9 @@ Princípios obrigatórios:
 - Escreva em português do Brasil, com linguagem técnica, ética e acolhedora.
 - Responda SEMPRE em JSON válido, exatamente no formato pedido.`;
 
-export type AiTask = "assessment_plan" | "intervention_plan" | "session_insights" | "evolution_analysis" | "report_draft" | "chat";
+export type AiTask =
+  | "assessment_plan" | "intervention_plan" | "session_insights" | "evolution_analysis" | "report_draft" | "chat"
+  | "application_guide" | "clinical_record" | "plan_session";
 
 export const TASK_INSTRUCTIONS: Record<AiTask, string> = {
   assessment_plan: `Monte um plano de avaliação neuropsicopedagógica a partir dos dados fornecidos.
@@ -24,7 +26,9 @@ Formato JSON:
   "checklist": string[],
   "warnings": string[]
 }
-Ordene os instrumentos na sequência sugerida de aplicação. Em "warnings" inclua limitações de escopo ou informações faltantes.`,
+Ordene os instrumentos na sequência sugerida de aplicação. Em "warnings" inclua limitações de escopo ou informações faltantes.
+Se a entrada trouxer "biblioteca_de_instrumentos", prefira esses nomes exatamente como escritos e NÃO sugira aplicar os de acesso "psicologo".
+Itens de acesso "verificar" podem ser sugeridos com um aviso em "warnings".`,
 
   intervention_plan: `Crie um plano de intervenção neuropsicopedagógica individualizado.
 Formato JSON:
@@ -64,6 +68,39 @@ Formato JSON:
   report_draft: `Redija o texto solicitado para um documento clínico, mantendo linguagem técnica e ética, sem diagnóstico médico.
 Formato JSON: { "text": string }
 Use apenas as informações fornecidas; marque lacunas com [completar].`,
+
+  application_guide: `Gere um ROTEIRO DE APLICAÇÃO para o instrumento informado, adaptado à criança descrita.
+Regras: NÃO reproduza itens, estímulos, instruções literais, critérios de pontuação ou tabelas normativas do manual (material protegido).
+O roteiro organiza a sessão e lembra pontos de atenção; a aplicação deve seguir o manual oficial.
+Se o instrumento for de uso privativo de psicólogos, diga isso em "caution" e sugira encaminhamento em vez de roteiro de aplicação.
+Formato JSON:
+{
+  "preparation": string[],
+  "materials": string[],
+  "rapport": string,
+  "steps": string[],
+  "observation_points": string[],
+  "interruption_criteria": string[],
+  "adaptations": string[],
+  "scoring_notes": string,
+  "caution": string
+}`,
+
+  clinical_record: `Redija um MODELO DE REGISTRO CLÍNICO da aplicação do instrumento, a partir das pontuações e observações informadas.
+Regras: use somente os dados fornecidos; NÃO invente percentis, escores padronizados ou classificações normativas que não foram informados.
+Se houver aplicações anteriores, compare objetivamente (melhora, estabilidade, piora) indicando os valores.
+Formato JSON:
+{
+  "record": string,
+  "highlights": string[],
+  "comparison": string,
+  "next_steps": string[]
+}`,
+
+  plan_session: `Sugira o conteúdo de UMA sessão de intervenção para o objetivo informado, coerente com o plano e o perfil da criança.
+Se houver atividades da biblioteca da profissional na entrada, prefira-as.
+Formato JSON:
+{ "objective": string, "activities": string, "materials": string, "duration_min": number, "strategies": string, "success_criteria": string }`,
 
   chat: `Responda à pergunta da profissional de forma objetiva.
 Formato JSON: { "answer": string }`,

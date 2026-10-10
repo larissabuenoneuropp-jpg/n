@@ -61,6 +61,7 @@ export type InstrumentStatus = "planejado" | "aplicado" | "corrigido" | "no_rela
 
 export interface AssessmentInstrument {
   id: ID;
+  instrument_id?: ID | null;
   name: string;
   status: InstrumentStatus;
   date?: string;
@@ -264,6 +265,47 @@ export interface AuditLog {
   at: string;
 }
 
+export type InstrumentAccess = "psicologo" | "multiprofissional" | "verificar";
+
+/** Campo de pontuação usado para quantificar a evolução entre aplicações. */
+export interface RecordField {
+  key: string;
+  label: string;
+  type: "number" | "text";
+  /** true = valor maior indica melhor desempenho; false = menor é melhor (ex.: erros, tempo). */
+  higher_is_better?: boolean;
+}
+
+export interface Instrument extends Base {
+  name: string;
+  full_name: string;
+  area: string;
+  evaluates: string;
+  age_range?: string;
+  access: InstrumentAccess;
+  access_note?: string;
+  application_guide?: string;
+  record_fields: RecordField[];
+  favorite: boolean;
+}
+
+export type RecordPhase = "inicial" | "intermediaria" | "reavaliacao";
+
+/** Registro de aplicação de um instrumento (base da quantificação da evolução). */
+export interface AssessmentRecord extends Base {
+  patient_id: ID;
+  assessment_id?: ID | null;
+  instrument_id?: ID | null;
+  instrument_name: string;
+  date: string;
+  phase: RecordPhase;
+  scores: Record<string, number | string>;
+  application_guide?: string;
+  behavior?: string;
+  clinical_record: string;
+  ai_assisted?: boolean;
+}
+
 export interface TableMap {
   patients: Patient;
   assessments: Assessment;
@@ -274,6 +316,8 @@ export interface TableMap {
   documents: DocumentFile;
   transactions: Transaction;
   reports: Report;
+  instruments: Instrument;
+  assessment_records: AssessmentRecord;
 }
 
 export type TableName = keyof TableMap;

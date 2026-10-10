@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  BookOpen, CalendarDays, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
+  BookOpen, CalendarDays, ClipboardCheck, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Avatar } from "./ui";
@@ -16,6 +16,7 @@ export const NAV = [
   { href: "/dashboard", label: "Início", icon: LayoutDashboard },
   { href: "/agenda", label: "Agenda", icon: CalendarDays },
   { href: "/pacientes", label: "Pacientes", icon: Users },
+  { href: "/testes", label: "Testes e protocolos", icon: ClipboardCheck },
   { href: "/atividades", label: "Atividades", icon: BookOpen },
   { href: "/documentos", label: "Documentos", icon: FolderOpen },
   { href: "/relatorios", label: "Relatórios", icon: FileText },
@@ -84,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const footer = (
     <div className="mt-auto space-y-3 pt-4">
       {store.mode === "demo" && (
-        <div className="rounded-lg border border-lilac-200 bg-lilac-50 p-3 text-[11px] leading-relaxed text-lilac-600">
+        <div className="rounded-lg border border-sage-200 bg-sage-50 p-3 text-[11px] leading-relaxed text-sage-600">
           <b>Modo demonstração.</b> Dados fictícios salvos só neste navegador. Configure o Supabase para usar com pacientes reais.
         </div>
       )}

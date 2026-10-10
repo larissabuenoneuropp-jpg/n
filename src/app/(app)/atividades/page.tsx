@@ -117,7 +117,7 @@ export default function ActivitiesPage() {
             <Card key={a.id} className="flex flex-col p-4 transition hover:border-brand-200">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <Badge tone="blue">{a.area}</Badge>
-                <button onClick={() => toggleFav(a)} aria-label="Favoritar" className={a.favorite ? "text-lilac-500" : "text-ink-faint hover:text-lilac-500"}>
+                <button onClick={() => toggleFav(a)} aria-label="Favoritar" className={a.favorite ? "text-sage-500" : "text-ink-faint hover:text-sage-500"}>
                   <Heart className={cn("h-4 w-4", a.favorite && "fill-current")} />
                 </button>
               </div>
@@ -129,7 +129,7 @@ export default function ActivitiesPage() {
                 <Badge tone={DIFF[a.difficulty].tone}>{DIFF[a.difficulty].label}</Badge>
                 <Badge><Clock className="h-3 w-3" /> {a.duration_min} min</Badge>
                 <Badge>{a.age_min}–{a.age_max} anos</Badge>
-                {a.diagnoses.slice(0, 2).map((d) => <Badge key={d} tone="lilac">{d}</Badge>)}
+                {a.diagnoses.slice(0, 2).map((d) => <Badge key={d} tone="sage">{d}</Badge>)}
               </div>
             </Card>
           ))}
@@ -149,7 +149,7 @@ export default function ActivitiesPage() {
               <Badge tone={DIFF[detail.difficulty].tone}>{DIFF[detail.difficulty].label}</Badge>
               <Badge>{detail.duration_min} min</Badge>
               <Badge>{detail.age_min}–{detail.age_max} anos</Badge>
-              {detail.diagnoses.map((d) => <Badge key={d} tone="lilac">{d}</Badge>)}
+              {detail.diagnoses.map((d) => <Badge key={d} tone="sage">{d}</Badge>)}
             </div>
             {detail.skills.length > 0 && <p><b>Habilidades:</b> {detail.skills.join(", ")}</p>}
             <div><p className="mb-1 font-semibold">Objetivos</p><p className="text-ink-soft">{detail.objectives}</p></div>

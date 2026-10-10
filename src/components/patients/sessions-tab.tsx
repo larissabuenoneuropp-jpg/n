@@ -54,7 +54,7 @@ function InsightsView({ ins }: { ins: SessionInsights }) {
         {block("Dificuldades observadas", ins.difficulties, null)}
         {block("Habilidades emergentes", ins.emerging_skills, <TrendingUp className="h-3.5 w-3.5" />)}
         {block("Alertas clínicos", ins.clinical_alerts, <AlertTriangle className="h-3.5 w-3.5" />, "text-amber-700")}
-        {block("Possíveis encaminhamentos", ins.referrals, null, "text-lilac-600")}
+        {block("Possíveis encaminhamentos", ins.referrals, null, "text-sage-600")}
       </div>
     </div>
   );
@@ -285,7 +285,7 @@ export function SessionsTab({ patient, autoNew, appointmentId }: { patient: Pati
           <div className="p-5">
             <LineChart data={chartData} xKey="x" yMax={5} series={SCALES.map((s) => ({ key: s.key, label: s.label }))} />
             {evolution && (
-              <div className="mt-5 space-y-3 rounded-xl border border-lilac-200 bg-lilac-50/40 p-4">
+              <div className="mt-5 space-y-3 rounded-xl border border-sage-200 bg-sage-50/40 p-4">
                 <AiNotice demo={evolution.demo} />
                 <p className="text-sm">{evolution.data.summary}</p>
                 <div className="grid gap-3 text-sm text-ink-soft sm:grid-cols-2">
@@ -343,7 +343,7 @@ export function SessionsTab({ patient, autoNew, appointmentId }: { patient: Pati
                     </div>
                   )}
                 </dl>
-                <div className="rounded-xl bg-gradient-to-br from-brand-50/60 to-lilac-50/60 p-4">
+                <div className="rounded-xl bg-gradient-to-br from-brand-50/60 to-sage-50/60 p-4">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><Sparkles className="h-3.5 w-3.5" /> Sugestões da IA</p>
                     <Button variant="ghost" size="sm" loading={insightLoading === r.id} onClick={() => regenerate(r)}>{r.ai_insights ? "Gerar novamente" : "Gerar"}</Button>

@@ -54,7 +54,7 @@ export default function AssistantPage() {
           <div className="flex-1 space-y-4 overflow-y-auto p-5">
             {msgs.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-3 rounded-2xl bg-gradient-to-br from-brand-100 to-lilac-200 p-3 text-brand-700"><Sparkles className="h-6 w-6" /></div>
+                <div className="mb-3 rounded-2xl bg-gradient-to-br from-brand-100 to-sage-200 p-3 text-brand-700"><Sparkles className="h-6 w-6" /></div>
                 <p className="font-medium">Como posso ajudar hoje?</p>
                 <div className="mt-4 grid max-w-xl gap-2 sm:grid-cols-2">
                   {SUGGESTIONS.map((s) => (

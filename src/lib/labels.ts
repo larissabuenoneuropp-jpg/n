@@ -3,7 +3,7 @@ import type { Tone } from "@/components/ui";
 
 export const APPT_KIND: Record<AppointmentKind, { label: string; color: string }> = {
   atendimento: { label: "Atendimento", color: "bg-brand-50 border-brand-200 text-brand-800" },
-  avaliacao: { label: "Avaliação", color: "bg-lilac-50 border-lilac-200 text-lilac-600" },
+  avaliacao: { label: "Avaliação", color: "bg-sage-50 border-sage-200 text-sage-600" },
   devolutiva: { label: "Devolutiva", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
   bloqueio: { label: "Bloqueio", color: "bg-slate-100 border-slate-200 text-slate-500" },
   outro: { label: "Outro", color: "bg-amber-50 border-amber-200 text-amber-800" },
@@ -20,7 +20,7 @@ export const APPT_STATUS: Record<AppointmentStatus, { label: string; tone: Tone 
 export const INSTRUMENT_STATUS: Record<InstrumentStatus, { label: string; tone: Tone }> = {
   planejado: { label: "Planejado", tone: "gray" },
   aplicado: { label: "Aplicado", tone: "blue" },
-  corrigido: { label: "Corrigido", tone: "lilac" },
+  corrigido: { label: "Corrigido", tone: "sage" },
   no_relatorio: { label: "No relatório", tone: "green" },
 };
 

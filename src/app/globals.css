@@ -19,3 +19,7 @@ body {
   .print-area { box-shadow: none !important; border: none !important; padding: 0 !important; }
   @page { margin: 18mm; }
 }
+
+h1, h2, h3 {
+  @apply font-display;
+}

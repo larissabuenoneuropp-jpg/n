@@ -100,7 +100,7 @@ export function DocumentsList({ patientId }: { patientId?: string }) {
                   {formatDate(d.created_at)} {size(d.size) && `· ${size(d.size)}`} {d.notes && `· ${d.notes}`}
                 </p>
               </div>
-              <Badge tone="lilac">{DOCUMENT_CATEGORIES.find((c) => c.value === d.category)?.label ?? d.category}</Badge>
+              <Badge tone="sage">{DOCUMENT_CATEGORIES.find((c) => c.value === d.category)?.label ?? d.category}</Badge>
               <Button variant="ghost" size="sm" onClick={() => openDoc(d)} aria-label="Baixar"><Download className="h-4 w-4" /></Button>
               <Button variant="ghost" size="sm" onClick={() => del(d)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
             </div>
