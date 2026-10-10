@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import {
-  AlertCircle, CalendarClock, CalendarPlus, Cake, ClipboardList, FilePlus2, NotebookPen, Sparkles, Target, TrendingUp, UserPlus, Users, Wallet,
+  AlertCircle, ListChecks, CalendarClock, CalendarPlus, Cake, ClipboardList, FilePlus2, NotebookPen, Sparkles, Target, TrendingUp, UserPlus, Users, Wallet,
 } from "lucide-react";
 import { Avatar, Badge, Card, CardHeader, EmptyState, PageHeader, Spinner } from "@/components/ui";
 import { useCollection, useData } from "@/lib/data/provider";
 import { APPT_KIND, APPT_STATUS, txStatus } from "@/lib/labels";
+import { PRIORITY } from "@/lib/tasks";
 import { formatDate, formatTime, money, monthKey, parseDate, sameDay, startOfWeek, addDays } from "@/lib/utils";
 
 function Stat({ label, value, hint, icon }: { label: string; value: string; hint?: string; icon: React.ReactNode }) {
@@ -29,6 +30,11 @@ export default function DashboardPage() {
   const txs = useCollection("transactions");
   const assessments = useCollection("assessments");
   const plans = useCollection("intervention_plans");
+  const tasks = useCollection("tasks");
+  const topTasks = tasks.data
+    .filter((t) => t.status !== "concluida")
+    .sort((a, b) => PRIORITY[a.priority].order - PRIORITY[b.priority].order || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
+    .slice(0, 5);
 
   const pmap = useMemo(() => new Map(patients.data.map((p) => [p.id, p])), [patients.data]);
   const now = new Date();
@@ -207,6 +213,22 @@ export default function DashboardPage() {
         </Card>
 
         <div className="space-y-4">
+          <Card>
+            <CardHeader title="Tarefas prioritárias" icon={<ListChecks className="h-4 w-4" />} action={<Link href="/tarefas" className="text-xs text-brand-600 hover:underline">Ver todas</Link>} />
+            {topTasks.length === 0 ? (
+              <EmptyState title="Nenhuma tarefa em aberto" />
+            ) : (
+              <ul className="divide-y divide-line">
+                {topTasks.map((t) => (
+                  <li key={t.id} className="flex items-center gap-3 px-5 py-2.5">
+                    <Badge tone={PRIORITY[t.priority].tone}>{PRIORITY[t.priority].label}</Badge>
+                    <span className="min-w-0 flex-1 truncate text-sm">{t.title}</span>
+                    {t.due_date && <span className={`shrink-0 text-xs ${t.due_date < new Date().toISOString().slice(0, 10) ? "text-red-600" : "text-ink-faint"}`}>{formatDate(t.due_date, { day: "2-digit", month: "2-digit" })}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
           <Card>
             <CardHeader title="Aniversariantes do mês" icon={<Cake className="h-4 w-4" />} />
             {birthdays.length === 0 ? (

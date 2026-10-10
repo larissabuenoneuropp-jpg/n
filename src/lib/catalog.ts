@@ -21,6 +21,8 @@ export const DOCUMENT_CATEGORIES = [
   { value: "contrato", label: "Contrato" },
   { value: "laudo", label: "Laudo" },
   { value: "encaminhamento", label: "Encaminhamento" },
+  { value: "avaliacao", label: "Avaliação" },
+  { value: "sessao", label: "Sessão" },
   { value: "foto", label: "Foto" },
   { value: "video", label: "Vídeo" },
   { value: "outro", label: "Outro" },

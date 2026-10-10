@@ -2,13 +2,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { BookOpen, CalendarRange, Check, ChevronDown, ChevronUp, FileText, Plus, Save, Sparkles, Target, Trash2 } from "lucide-react";
+import { CalendarRange, Check, ChevronDown, ChevronUp, FileText, Plus, Save, Sparkles, Target, Trash2 } from "lucide-react";
 import {
   AiNotice, Badge, Button, Card, CardHeader, EmptyState, Field, Input, ListEditor, Modal, Select, Spinner, Textarea, useToast,
 } from "@/components/ui";
 import { useCollection } from "@/lib/data/provider";
 import { askAI, patientContext } from "@/lib/ai/client";
-import type { Activity, Assessment, InterventionPlan, Patient, PlannedSession } from "@/lib/types";
+import type { Assessment, InterventionPlan, Patient, PlannedSession } from "@/lib/types";
+import { ActivitiesEditor, AttachmentsField, ObjectivesEditor } from "@/components/sessions/editors";
+import { activitiesOf, objectiveSummary, objectivesOf, OBJECTIVE_STATUS, toActivities, toObjectives, withActivities, withObjectives } from "@/lib/sessions";
 import { addDays, formatDate, parseDate, toISODate, today, uid } from "@/lib/utils";
 
 interface AiPlan {
@@ -17,7 +19,10 @@ interface AiPlan {
   specific_objectives: string[];
   goals: string[];
   progress_criteria: string;
-  sessions: Array<Omit<PlannedSession, "id" | "done">>;
+  sessions: Array<{
+    number: number; objectives?: unknown; objective?: string; activities?: unknown; materials?: string;
+    duration_min?: number; strategies?: string; success_criteria?: string;
+  }>;
 }
 
 /** Distribui as datas das sessões conforme a frequência semanal a partir da data de início. */
@@ -33,7 +38,18 @@ function scheduleDates(start: string, count: number, perWeek: number) {
 }
 
 function blankSession(n: number): PlannedSession {
-  return { id: uid(), number: n, objective: "", activities: "", materials: "", duration_min: 50, strategies: "", success_criteria: "", done: false };
+  return { id: uid(), number: n, objective: "", activities: "", objectives: [], activity_list: [], attachments: [], materials: "", duration_min: 45, strategies: "", success_criteria: "", done: false };
+}
+
+/** Converte uma sessão sugerida pela IA (vários objetivos e atividades) em sessão do plano. */
+function sessionFromAI(s: AiPlan["sessions"][number], n: number, date?: string): PlannedSession {
+  let ps: PlannedSession = {
+    ...blankSession(n), date, materials: s.materials ?? "", duration_min: Number(s.duration_min) || 45,
+    strategies: s.strategies ?? "", success_criteria: s.success_criteria ?? "",
+  };
+  ps = withObjectives(ps, toObjectives(s.objectives ?? s.objective));
+  ps = withActivities(ps, toActivities(s.activities));
+  return ps;
 }
 
 function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
@@ -92,7 +108,7 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
         title: ai.title, general_objective: ai.general_objective, progress_criteria: ai.progress_criteria,
         specific_objectives: ai.specific_objectives.map((text) => ({ id: uid(), text })),
         goals: ai.goals.map((text) => ({ id: uid(), text })),
-        schedule: ai.sessions.map((s, i) => ({ ...blankSession(i + 1), ...s, number: i + 1, id: uid(), done: false, date: dates[i] })),
+        schedule: ai.sessions.map((s, i) => sessionFromAI(s, i + 1, dates[i])),
       });
     }
     await onCreate(plan);
@@ -131,7 +147,16 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
           <div>
             <p className="mb-2 text-xs font-medium text-ink-soft">Cronograma sugerido ({ai.sessions.length} sessões) — editável após criar</p>
             <ul className="space-y-1.5 text-sm">
-              {ai.sessions.map((s, i) => <li key={i} className="rounded-lg bg-canvas px-3 py-2"><b>Sessão {i + 1}:</b> {s.objective}</li>)}
+              {ai.sessions.map((s, i) => {
+                const objs = toObjectives(s.objectives ?? s.objective);
+                const acts = toActivities(s.activities);
+                return (
+                  <li key={i} className="rounded-lg bg-canvas px-3 py-2">
+                    <b>Sessão {i + 1}</b> · {objs.length} objetivo(s), {acts.length} atividade(s)
+                    <ul className="mt-1 list-disc pl-5 text-xs text-ink-soft">{objs.map((o) => <li key={o.id}>{o.text}</li>)}</ul>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -140,55 +165,62 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
   );
 }
 
-function SessionCard({ s, onChange, onRemove, onSuggest, activities }: {
-  s: PlannedSession; onChange: (p: Partial<PlannedSession>) => void; onRemove: () => void;
-  onSuggest: () => Promise<void>; activities: Activity[];
+function SessionCard({ s, patientId, planTitle, onChange, onRemove, onSuggest }: {
+  s: PlannedSession; patientId: string; planTitle: string; onChange: (next: PlannedSession) => void; onRemove: () => void; onSuggest: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
-  const [picker, setPicker] = useState("");
-  const insertActivity = (id: string) => {
-    const a = activities.find((x) => x.id === id);
-    if (!a) return;
-    onChange({
-      activities: [s.activities, `${a.title} (${a.duration_min} min): ${a.steps.split("\n")[0] ?? ""}`].filter(Boolean).join("\n"),
-      materials: [s.materials, a.materials].filter(Boolean).join("; "),
-    });
-    setPicker("");
-  };
+  const objectives = objectivesOf(s);
+  const activities = activitiesOf(s);
+  const sum = objectiveSummary(objectives);
   return (
     <div className={`rounded-xl border ${s.done ? "border-emerald-200 bg-emerald-50/30" : "border-line bg-white"}`}>
       <div className="flex items-center gap-3 px-4 py-3">
-        <button onClick={() => onChange({ done: !s.done })} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${s.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-line"}`} aria-label="Marcar como realizada">
+        <button onClick={() => onChange({ ...s, done: !s.done })} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${s.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-line"}`} aria-label="Marcar como realizada">
           {s.done && <Check className="h-3 w-3" />}
         </button>
         <button className="min-w-0 flex-1 text-left" onClick={() => setOpen(!open)}>
           <p className="text-sm font-medium">Sessão {s.number}{s.date ? <span className="font-normal text-ink-faint"> · {formatDate(s.date)}</span> : null}</p>
-          <p className="truncate text-xs text-ink-soft">{s.objective || "Sem objetivo definido"}</p>
+          <p className="truncate text-xs text-ink-soft">
+            {objectives.length ? objectives.map((o) => o.text).join(" · ") : "Sem objetivos definidos"}
+          </p>
         </button>
+        <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
+          <Badge>{objectives.length} obj.</Badge>
+          <Badge>{activities.length} ativ.</Badge>
+          {sum.evaluated > 0 && <Badge tone="green">{sum.atingido}/{sum.total} atingidos</Badge>}
+          {(s.attachments?.length ?? 0) > 0 && <Badge tone="sage">{s.attachments!.length} anexo(s)</Badge>}
+        </div>
         <button onClick={() => setOpen(!open)} className="text-ink-faint" aria-label="Expandir">{open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button>
       </div>
       {open && (
-        <div className="grid gap-3 border-t border-line p-4 sm:grid-cols-2">
-          <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+        <div className="grid gap-4 border-t border-line p-4 lg:grid-cols-2">
+          <div className="lg:col-span-2">
             <Button variant="ai" size="sm" loading={suggesting} onClick={async () => { setSuggesting(true); await onSuggest().finally(() => setSuggesting(false)); }}>
-              <Sparkles className="h-3.5 w-3.5" /> Sugerir sessão com IA
+              <Sparkles className="h-3.5 w-3.5" /> Sugerir objetivos e atividades com IA
             </Button>
-            <div className="flex items-center gap-1.5">
-              <BookOpen className="h-4 w-4 text-ink-faint" />
-              <Select className="h-8 w-60 text-xs" value={picker} onChange={(e) => insertActivity(e.target.value)} placeholder="Inserir atividade da biblioteca…"
-                options={activities.map((a) => ({ value: a.id, label: `${a.favorite ? "★ " : ""}${a.title} · ${a.area}` }))} />
-            </div>
           </div>
-          <Field label="Objetivo" className="sm:col-span-2"><Input value={s.objective} onChange={(e) => onChange({ objective: e.target.value })} /></Field>
-          <Field label="Atividades sugeridas"><Textarea value={s.activities} onChange={(e) => onChange({ activities: e.target.value })} /></Field>
-          <Field label="Materiais"><Textarea value={s.materials} onChange={(e) => onChange({ materials: e.target.value })} /></Field>
-          <Field label="Estratégias"><Textarea value={s.strategies} onChange={(e) => onChange({ strategies: e.target.value })} /></Field>
-          <Field label="Critérios de sucesso"><Textarea value={s.success_criteria} onChange={(e) => onChange({ success_criteria: e.target.value })} /></Field>
-          <Field label="Data"><Input type="date" value={s.date ?? ""} onChange={(e) => onChange({ date: e.target.value })} /></Field>
-          <Field label="Tempo (min)"><Input type="number" min={5} value={s.duration_min} onChange={(e) => onChange({ duration_min: Number(e.target.value) })} /></Field>
-          <Field label="Registro" className="sm:col-span-2"><Textarea value={s.record ?? ""} onChange={(e) => onChange({ record: e.target.value })} /></Field>
-          <div className="sm:col-span-2"><Button variant="danger" size="sm" onClick={onRemove}><Trash2 className="h-3.5 w-3.5" /> Remover sessão</Button></div>
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-ink-soft">Objetivos da sessão</p>
+            <ObjectivesEditor value={objectives} onChange={(v) => onChange(withObjectives(s, v))} withStatus />
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-ink-soft">Atividades</p>
+            <ActivitiesEditor value={activities} onChange={(v) => onChange(withActivities(s, v))} withDone />
+          </div>
+          <Field label="Materiais gerais"><Textarea value={s.materials} onChange={(e) => onChange({ ...s, materials: e.target.value })} /></Field>
+          <Field label="Estratégias"><Textarea value={s.strategies} onChange={(e) => onChange({ ...s, strategies: e.target.value })} /></Field>
+          <Field label="Critérios de sucesso"><Textarea value={s.success_criteria} onChange={(e) => onChange({ ...s, success_criteria: e.target.value })} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Data"><Input type="date" value={s.date ?? ""} onChange={(e) => onChange({ ...s, date: e.target.value })} /></Field>
+            <Field label="Tempo (min)"><Input type="number" min={5} value={s.duration_min} onChange={(e) => onChange({ ...s, duration_min: Number(e.target.value) })} /></Field>
+          </div>
+          <Field label="Registro" className="lg:col-span-2"><Textarea value={s.record ?? ""} onChange={(e) => onChange({ ...s, record: e.target.value })} /></Field>
+          <div className="lg:col-span-2">
+            <p className="mb-1.5 text-xs font-medium text-ink-soft">Anexos da sessão (também aparecem em Documentos)</p>
+            <AttachmentsField patientId={patientId} value={s.attachments ?? []} onChange={(v) => onChange({ ...s, attachments: v })} category="sessao" context={`${planTitle} — Sessão ${s.number}`} />
+          </div>
+          <div className="lg:col-span-2"><Button variant="danger" size="sm" onClick={onRemove}><Trash2 className="h-3.5 w-3.5" /> Remover sessão</Button></div>
         </div>
       )}
     </div>
@@ -203,19 +235,23 @@ function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPla
 
   async function suggestSession(s: PlannedSession) {
     try {
-      const age = patientContext(patient);
-      const r = await askAI<Partial<PlannedSession>>("plan_session", {
-        ...age, objetivo: s.objective || undefined, objetivo_geral_do_plano: f.general_objective,
+      const r = await askAI<AiPlan["sessions"][number]>("plan_session", {
+        ...patientContext(patient), objetivos_atuais: objectivesOf(s).map((o) => o.text), objetivo_geral_do_plano: f.general_objective,
         objetivos_especificos: f.specific_objectives.map((o) => o.text), numero_da_sessao: s.number,
-        sessoes_anteriores: f.schedule.filter((x) => x.number < s.number).slice(-3).map((x) => ({ objetivo: x.objective, registro: x.record })),
+        sessoes_anteriores: f.schedule.filter((x) => x.number < s.number).slice(-3).map((x) => ({
+          objetivos: objectivesOf(x).map((o) => `${o.text}${o.status ? ` (${OBJECTIVE_STATUS[o.status].label})` : ""}`), registro: x.record,
+        })),
         biblioteca: activities.data.filter((a) => a.favorite).slice(0, 15).map((a) => ({ titulo: a.title, area: a.area, objetivos: a.objectives })),
       });
-      const { objective, activities: acts, materials, duration_min, strategies, success_criteria } = r.result;
+      const sug = sessionFromAI(r.result, s.number, s.date);
       setF((cur) => ({
         ...cur,
         schedule: cur.schedule.map((x) => (x.id === s.id ? {
-          ...x, objective: objective || x.objective, activities: acts ?? x.activities, materials: materials ?? x.materials,
-          duration_min: duration_min ?? x.duration_min, strategies: strategies ?? x.strategies, success_criteria: success_criteria ?? x.success_criteria,
+          ...x,
+          objectives: sug.objectives?.length ? sug.objectives : x.objectives, objective: sug.objectives?.length ? sug.objective : x.objective,
+          activity_list: sug.activity_list?.length ? sug.activity_list : x.activity_list, activities: sug.activity_list?.length ? sug.activities : x.activities,
+          materials: sug.materials || x.materials, duration_min: sug.duration_min || x.duration_min,
+          strategies: sug.strategies || x.strategies, success_criteria: sug.success_criteria || x.success_criteria,
         } : x)),
       }));
       toast(r.demo ? "Sugestão de exemplo inserida (modo demonstração) — revise e salve" : "Sugestão inserida — revise e salve o plano");
@@ -268,10 +304,11 @@ function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPla
               <SessionCard
                 key={s.id}
                 s={s}
-                onChange={(patch) => setF({ ...f, schedule: f.schedule.map((x) => (x.id === s.id ? { ...x, ...patch } : x)) })}
+                patientId={f.patient_id}
+                planTitle={f.title}
+                onChange={(next) => setF({ ...f, schedule: f.schedule.map((x) => (x.id === s.id ? next : x)) })}
                 onRemove={() => setF({ ...f, schedule: f.schedule.filter((x) => x.id !== s.id).map((x, i) => ({ ...x, number: i + 1 })) })}
                 onSuggest={() => suggestSession(s)}
-                activities={activities.data}
               />
             ))}
           </div>
@@ -299,7 +336,7 @@ export function InterventionTab({ patient }: { patient: Patient }) {
   const baseAssessment = assessments.data.find((a) => a.id === fromAssessment) ?? assessments.data.find((a) => a.status === "concluida");
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       <div className="space-y-2">
         <Button className="w-full" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo plano</Button>
         {plans.data.map((p) => (

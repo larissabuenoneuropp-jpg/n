@@ -19,12 +19,12 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
           { name: "Cubos de Corsi", session: 5, justification: "Avaliar memória operacional visuoespacial." },
         ],
         sessions: [
-          { number: 1, objective: "Vínculo e observação da modalidade de aprendizagem", instruments: ["EOCA"], duration_min: 50 },
-          { number: 2, objective: "Pré-requisitos de alfabetização", instruments: ["IAR"], duration_min: 50 },
-          { number: 3, objective: "Processos de leitura", instruments: ["PROLEC"], duration_min: 50 },
-          { number: 4, objective: "Processos de escrita", instruments: ["PROESC"], duration_min: 50 },
-          { number: 5, objective: "Atenção e memória", instruments: ["TAC", "Cubos de Corsi"], duration_min: 50 },
-          { number: 6, objective: "Devolutiva aos responsáveis", instruments: [], duration_min: 60 },
+          { number: 1, objectives: ["Estabelecer vínculo com a criança", "Observar a modalidade de aprendizagem", "Identificar interesses para uso nas próximas sessões"], instruments: ["EOCA"], activities: ["Conversa sobre interesses", "Jogo livre de aquecimento"], duration_min: 45 },
+          { number: 2, objectives: ["Verificar pré-requisitos de alfabetização", "Observar coordenação motora fina", "Observar discriminação visual e auditiva"], instruments: ["IAR"], activities: [], duration_min: 45 },
+          { number: 3, objectives: ["Avaliar identificação de letras", "Avaliar leitura de palavras e pseudopalavras", "Avaliar compreensão de frases"], instruments: ["PROLEC"], activities: [], duration_min: 45 },
+          { number: 4, objectives: ["Avaliar escrita de palavras e pseudopalavras", "Observar tipos de erros ortográficos", "Observar produção escrita espontânea"], instruments: ["PROESC"], activities: [], duration_min: 45 },
+          { number: 5, objectives: ["Rastrear atenção seletiva", "Avaliar memória operacional visuoespacial"], instruments: ["TAC", "Cubos de Corsi"], activities: ["Pausa ativa entre as tarefas"], duration_min: 45 },
+          { number: 6, objectives: ["Apresentar resultados aos responsáveis", "Pactuar objetivos do plano de intervenção", "Orientar família e escola"], instruments: [], activities: [], duration_min: 60 },
         ],
         total_sessions: 6,
         justification: "Sequência que parte de instrumentos de menor exigência para os mais específicos, favorecendo o vínculo e reduzindo a ansiedade de desempenho.",
@@ -45,10 +45,19 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
         progress_criteria: "Desempenho registrado em cada sessão, escalas de progresso (1–5) e reavaliação trimestral.",
         sessions: Array.from({ length: n }, (_, i) => ({
           number: i + 1,
-          objective: themes[i % themes.length],
-          activities: "Atividade lúdica de aquecimento; atividade principal com apoio multissensorial; fechamento com jogo.",
+          objectives: [
+            themes[i % themes.length],
+            "Manter a atenção na tarefa por pelo menos 10 minutos",
+            "Realizar a atividade principal com apoio mínimo",
+            "Verbalizar a estratégia utilizada",
+          ],
+          activities: [
+            { title: "Aquecimento lúdico", materials: "Jogo de cartas", duration_min: 5 },
+            { title: `Atividade principal: ${themes[i % themes.length].toLowerCase()}`, materials: "Cartões ilustrados, alfabeto móvel", duration_min: 25 },
+            { title: "Jogo de fechamento", materials: "Jogo de tabuleiro adaptado", duration_min: 10 },
+          ],
           materials: "Cartões ilustrados, alfabeto móvel, jogos de tabuleiro adaptados.",
-          duration_min: 50,
+          duration_min: 45,
           strategies: "Instrução explícita, modelagem, pistas graduais, reforço positivo.",
           success_criteria: "80% de acertos com apoio mínimo.",
         })),
@@ -98,10 +107,19 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
       };
     case "plan_session":
       return {
-        objective: String(input.objetivo ?? "Objetivo da sessão"),
-        activities: "Aquecimento lúdico (5 min); atividade principal com apoio multissensorial (30 min); jogo de fechamento (10 min).",
+        objectives: [
+          ...((input.objetivos_atuais as string[] | undefined) ?? []),
+          "Identificar o som inicial de palavras com apoio visual",
+          "Manter a atenção na tarefa por 10 minutos",
+          "Realizar a atividade com no máximo 2 pistas",
+        ],
+        activities: [
+          { title: "Aquecimento lúdico", materials: "Jogo de cartas", duration_min: 5 },
+          { title: "Atividade principal com apoio multissensorial", materials: "Alfabeto móvel, cartões", duration_min: 30 },
+          { title: "Jogo de fechamento", materials: "Jogo de tabuleiro", duration_min: 10 },
+        ],
         materials: "Cartões ilustrados, alfabeto móvel, jogo de tabuleiro adaptado.",
-        duration_min: 50,
+        duration_min: 45,
         strategies: "Modelagem, pistas graduais, reforço positivo. [MODO DEMONSTRAÇÃO]",
         success_criteria: "80% de acertos com apoio mínimo.",
       };

@@ -7,17 +7,20 @@ import {
 } from "@/components/ui";
 import { ApplyInstrumentModal, findInstrument } from "@/components/instruments/apply-instrument";
 import { EvolutionPanel } from "@/components/instruments/evolution-panel";
+import { ActivitiesEditor, AttachmentsField, ObjectivesEditor } from "@/components/sessions/editors";
+import { activitiesOf, assessmentSessionWithObjectives, objectiveSummary, objectivesOf, toActivities, toObjectives } from "@/lib/sessions";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useCollection } from "@/lib/data/provider";
 import { askAI, patientContext } from "@/lib/ai/client";
 import { DEFAULT_CHECKLIST, INSTRUMENTS } from "@/lib/catalog";
 import { INSTRUMENT_STATUS } from "@/lib/labels";
-import type { Assessment, AssessmentInstrument, AssessmentRecord, Instrument, InstrumentStatus, Patient } from "@/lib/types";
+import type { Assessment, AssessmentInstrument, AssessmentRecord, AssessmentSessionPlan, Instrument, InstrumentStatus, Patient } from "@/lib/types";
 import { ageLabel, formatDate, today, uid } from "@/lib/utils";
 
 interface AiAssessment {
   objective: string;
   instruments: Array<{ name: string; justification: string; session: number }>;
-  sessions: Array<{ number: number; objective: string; instruments: string[]; duration_min: number }>;
+  sessions: Array<{ number: number; objectives?: unknown; objective?: string; instruments: string[]; activities?: unknown; duration_min: number }>;
   total_sessions: number;
   justification: string;
   checklist: string[];
@@ -80,7 +83,10 @@ function NewAssessmentModal({ patient, open, onClose, onCreate }: {
         const match = findInstrument(lib.data, { name: i.name });
         return { id: uid(), instrument_id: match?.id ?? null, name: match?.name ?? i.name, status: "planejado" as const, session: i.session };
       });
-      base.sessions_plan = ai.sessions.map((s) => ({ id: uid(), number: s.number, objective: s.objective, instruments: s.instruments, duration_min: s.duration_min }));
+      base.sessions_plan = ai.sessions.map((s) => assessmentSessionWithObjectives(
+        { id: uid(), number: s.number, objective: "", instruments: s.instruments ?? [], activities: toActivities(s.activities), duration_min: s.duration_min },
+        toObjectives(s.objectives ?? s.objective),
+      ));
       if (ai.checklist.length) base.checklist = ai.checklist.map((label) => ({ id: uid(), label, done: false }));
     }
     await onCreate(base);
@@ -136,12 +142,12 @@ function NewAssessmentModal({ patient, open, onClose, onCreate }: {
             </ul>
           </div>
           <div>
-            <p className="mb-2 text-xs font-medium text-ink-soft">Objetivos por sessão</p>
+            <p className="mb-2 text-xs font-medium text-ink-soft">Objetivos por sessão (edite tudo depois de criar)</p>
             <ul className="space-y-1.5">
               {ai.sessions.map((s, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="w-16 shrink-0 text-xs text-ink-faint">Sessão {s.number}</span>
-                  <Input className="h-8" value={s.objective} onChange={(e) => setAi({ ...ai, sessions: ai.sessions.map((x, j) => (j === i ? { ...x, objective: e.target.value } : x)) })} />
+                <li key={i} className="rounded-lg bg-canvas px-3 py-2 text-sm">
+                  <b>Sessão {s.number}</b>{s.instruments?.length ? <span className="text-xs text-ink-faint"> — {s.instruments.join(", ")}</span> : null}
+                  <ul className="mt-1 list-disc pl-5 text-xs text-ink-soft">{toObjectives(s.objectives ?? s.objective).map((o) => <li key={o.id}>{o.text}</li>)}</ul>
                 </li>
               ))}
             </ul>
@@ -155,6 +161,64 @@ function NewAssessmentModal({ patient, open, onClose, onCreate }: {
         </div>
       )}
     </Modal>
+  );
+}
+
+function AssessmentSessionCard({ s, instruments, onChange, onRemove }: {
+  s: AssessmentSessionPlan; instruments: string[]; onChange: (s: AssessmentSessionPlan) => void; onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const objectives = objectivesOf(s);
+  const activities = activitiesOf({ activity_list: s.activities });
+  const sum = objectiveSummary(objectives);
+  return (
+    <div className="rounded-xl border border-line bg-white">
+      <button className="flex w-full items-center gap-3 px-4 py-3 text-left" onClick={() => setOpen(!open)}>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">Sessão {s.number}{s.date ? <span className="font-normal text-ink-faint"> · {formatDate(s.date)}</span> : null}</p>
+          <p className="truncate text-xs text-ink-soft">{objectives.length ? objectives.map((o) => o.text).join(" · ") : "Sem objetivos definidos"}</p>
+        </div>
+        <div className="hidden shrink-0 gap-1.5 sm:flex">
+          <Badge>{objectives.length} obj.</Badge>
+          {s.instruments.length > 0 && <Badge tone="sage">{s.instruments.join(", ")}</Badge>}
+          {sum.evaluated > 0 && <Badge tone="green">{sum.atingido}/{sum.total} atingidos</Badge>}
+        </div>
+        {open ? <ChevronUp className="h-4 w-4 text-ink-faint" /> : <ChevronDown className="h-4 w-4 text-ink-faint" />}
+      </button>
+      {open && (
+        <div className="grid gap-4 border-t border-line p-4 lg:grid-cols-2">
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-ink-soft">Objetivos da sessão</p>
+            <ObjectivesEditor value={objectives} onChange={(v) => onChange(assessmentSessionWithObjectives(s, v))} withStatus />
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-ink-soft">Instrumentos aplicados nesta sessão</p>
+              <div className="flex flex-wrap gap-1.5">
+                {instruments.length === 0 && <span className="text-xs text-ink-faint">Adicione instrumentos à avaliação primeiro.</span>}
+                {instruments.map((name) => {
+                  const on = s.instruments.includes(name);
+                  return (
+                    <button key={name} type="button" onClick={() => onChange({ ...s, instruments: on ? s.instruments.filter((x) => x !== name) : [...s.instruments, name] })}
+                      className={`rounded-full border px-2.5 py-1 text-xs ${on ? "border-brand-300 bg-brand-50 text-brand-700" : "border-line text-ink-soft"}`}>{name}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-ink-soft">Atividades complementares</p>
+              <ActivitiesEditor value={activities} onChange={(v) => onChange({ ...s, activities: v })} withDone />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Data"><Input type="date" value={s.date ?? ""} onChange={(e) => onChange({ ...s, date: e.target.value })} /></Field>
+            <Field label="Duração (min)"><Input type="number" min={5} value={s.duration_min ?? ""} onChange={(e) => onChange({ ...s, duration_min: Number(e.target.value) })} /></Field>
+          </div>
+          <Field label="Observações da sessão"><Textarea value={s.notes ?? ""} onChange={(e) => onChange({ ...s, notes: e.target.value })} /></Field>
+          <div className="lg:col-span-2"><Button variant="danger" size="sm" onClick={onRemove}><Trash2 className="h-3.5 w-3.5" /> Remover sessão</Button></div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -262,7 +326,7 @@ function AssessmentEditor({ a, patient, onSave, onDelete, onConclude }: {
           )}
         </section>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div>
           <section>
             <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-faint"><CheckSquare className="h-3.5 w-3.5" /> Checklist de aplicação</h4>
             <ul className="space-y-1.5">
@@ -278,25 +342,32 @@ function AssessmentEditor({ a, patient, onSave, onDelete, onConclude }: {
               <ListEditor items={[]} placeholder="Novo item do checklist" onChange={(items) => setF({ ...f, checklist: [...f.checklist, ...items.map((label) => ({ id: uid(), label, done: false }))] })} />
             </div>
           </section>
-          <section>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Plano de sessões</h4>
-            {f.sessions_plan.length === 0 ? (
-              <p className="text-xs text-ink-faint">Nenhuma sessão planejada.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {f.sessions_plan.map((s) => (
-                  <li key={s.id} className="rounded-lg bg-canvas px-3 py-2 text-sm">
-                    <span className="font-medium">Sessão {s.number}:</span> {s.objective}
-                    {s.instruments.length > 0 && <span className="text-xs text-ink-faint"> — {s.instruments.join(", ")}</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Button variant="ghost" size="sm" className="mt-2" onClick={() => setF({ ...f, sessions_plan: [...f.sessions_plan, { id: uid(), number: f.sessions_plan.length + 1, objective: "Nova sessão", instruments: [] }] })}>
+        </div>
+
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Plano de sessões da avaliação</h4>
+            <Button variant="ghost" size="sm" onClick={() => setF({ ...f, sessions_plan: [...f.sessions_plan, { id: uid(), number: f.sessions_plan.length + 1, objective: "", objectives: [], instruments: [], activities: [] }] })}>
               <Plus className="h-3.5 w-3.5" /> Sessão
             </Button>
-          </section>
-        </div>
+          </div>
+          {f.sessions_plan.length === 0 ? (
+            <p className="text-xs text-ink-faint">Nenhuma sessão planejada.</p>
+          ) : (
+            <div className="space-y-2">
+              {f.sessions_plan.map((s) => (
+                <AssessmentSessionCard key={s.id} s={s} instruments={f.instruments.map((i) => i.name)}
+                  onChange={(next) => setF({ ...f, sessions_plan: f.sessions_plan.map((x) => (x.id === s.id ? next : x)) })}
+                  onRemove={() => setF({ ...f, sessions_plan: f.sessions_plan.filter((x) => x.id !== s.id).map((x, i) => ({ ...x, number: i + 1 })) })} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Anexos da avaliação (também aparecem em Documentos)</h4>
+          <AttachmentsField patientId={patient.id} value={f.attachments ?? []} onChange={(v) => setF({ ...f, attachments: v })} category="avaliacao" context={f.title} />
+        </section>
 
         {f.ai_justification && (
           <Field label="Justificativa clínica (sugerida pela IA, editável)">
@@ -342,7 +413,7 @@ export function AssessmentsTab({ patient }: { patient: Patient }) {
     <div className="space-y-4">
     <Segmented value={view} onChange={setView} options={[{ value: "planos", label: "Planos de avaliação" }, { value: "evolucao", label: "Evolução quantitativa" }]} />
     {view === "evolucao" ? <EvolutionPanel patient={patient} /> : (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       <div className="space-y-2">
         <Button className="w-full" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nova avaliação</Button>
         {data.map((a) => {

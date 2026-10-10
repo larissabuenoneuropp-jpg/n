@@ -5,6 +5,8 @@ import { addDays, toISODate, uid } from "@/lib/utils";
 import { ACTIVITY_LIBRARY } from "./activities-library";
 import { INSTRUMENT_LIBRARY } from "./instruments-library";
 import { DEFAULT_TEMPLATES } from "@/lib/templates";
+import { routineTasks } from "@/lib/tasks";
+import type { ClinicTask } from "@/lib/types";
 
 /** Dados fictícios para o modo demonstração. */
 export function buildSeed() {
@@ -99,16 +101,27 @@ export function buildSeed() {
   ];
 
   const plan1 = uid();
-  const schedule = [
-    ["Fortalecer consciência fonológica (rimas e sílabas)", "Caça-rimas com figuras; segmentação silábica com palmas"],
-    ["Correspondência grafema-fonema para pares surdos/sonoros", "Bingo de fonemas com foco em p/b, t/d"],
-    ["Ampliar fluência leitora", "Leitura compartilhada com régua de leitura"],
-    ["Ortografia: trocas f/v", "Ditado mudo com imagens"],
-  ].map(([objective, activities], i) => ({
-    id: uid(), number: i + 1, objective, activities, materials: "Cartões, alfabeto móvel, textos curtos",
-    duration_min: 50, strategies: "Instrução explícita, modelagem, reforço positivo, apoio multissensorial",
-    success_criteria: "Acertar ao menos 80% dos itens com apoio mínimo", done: i < 2, record: i < 2 ? "Realizada" : "",
-  }));
+  type SeedSession = { objs: string[]; acts: Array<[string, number, string]>; res?: Array<"atingido" | "parcial" | "nao_atingido"> };
+  const seedSessions: SeedSession[] = [
+    { objs: ["Identificar rimas em pares de palavras", "Segmentar palavras em sílabas", "Contar sílabas de palavras de 2 a 4 sílabas"],
+      acts: [["Caça-rimas com figuras", 15, "Cartões ilustrados"], ["Segmentação silábica com palmas", 10, "Fichas de palavras, tampinhas"], ["Jogo da memória de rimas", 15, "Pares de cartas"]], res: ["atingido", "atingido", "parcial"] },
+    { objs: ["Discriminar os sons /p/ e /b/", "Associar som inicial à letra", "Ler sílabas simples com p e b"],
+      acts: [["Bingo de fonemas (p/b)", 20, "Cartelas, marcadores"], ["Leitura de sílabas no alfabeto móvel", 15, "Alfabeto móvel"]], res: ["atingido", "parcial", "parcial"] },
+    { objs: ["Ler palavras regulares com apoio", "Usar régua de leitura de forma autônoma", "Responder 2 perguntas literais sobre o texto"],
+      acts: [["Leitura compartilhada com pistas visuais", 20, "Texto curto, régua colorida"], ["Mapa da história", 15, "Folha A3, canetas"]] },
+    { objs: ["Escrever palavras com f e v", "Revisar a própria escrita com checklist", "Reduzir trocas f/v na escrita espontânea"],
+      acts: [["Ditado mudo com imagens", 15, "Folha com figuras"], ["Traçado em bandeja sensorial (f/v)", 10, "Bandeja com sal"], ["Produção de frases", 15, "Cartões de frases"]] },
+  ];
+  const schedule = seedSessions.map((ss, i) => {
+    const objectives = ss.objs.map((text, j) => ({ id: uid(), text, status: ss.res?.[j] ?? null }));
+    const activity_list = ss.acts.map(([title, duration_min, materials]) => ({ id: uid(), title, duration_min, materials, done: Boolean(ss.res) }));
+    return {
+      id: uid(), number: i + 1, objective: ss.objs.join("; "), activities: ss.acts.map((a) => a[0]).join("\n"), objectives, activity_list, attachments: [],
+      materials: "Cartões, alfabeto móvel, textos curtos", duration_min: 45,
+      strategies: "Instrução explícita, modelagem, reforço positivo, apoio multissensorial",
+      success_criteria: "Acertar ao menos 80% dos itens com apoio mínimo", done: i < 2, record: i < 2 ? "Realizada" : "",
+    };
+  });
   const plans: InterventionPlan[] = [
     {
       id: plan1, patient_id: p1, title: "Plano de intervenção — leitura e escrita", status: "ativo", start_date: yearsAgo(0, 3),
@@ -197,6 +210,7 @@ export function buildSeed() {
   const activities: Activity[] = ACTIVITY_LIBRARY.map((a, i) => ({ ...a, id: uid(), favorite: i < 3 }));
 
   const reports: Report[] = [];
+  const tasks: ClinicTask[] = routineTasks(now).map((t) => ({ ...(t as ClinicTask), id: uid() }));
 
   const instruments: Instrument[] = INSTRUMENT_LIBRARY.map((i) => ({ ...i, id: uid(), favorite: false }));
   const confias = instruments.find((i) => i.name === "CONFIAS")!;
@@ -235,6 +249,6 @@ export function buildSeed() {
 
   return {
     patients, assessments, intervention_plans: plans, appointments, session_records: sessions,
-    activities, documents: [], transactions, reports, profile, instruments, assessment_records, receipts,
+    activities, documents: [], transactions, reports, profile, instruments, assessment_records, receipts, tasks,
   };
 }

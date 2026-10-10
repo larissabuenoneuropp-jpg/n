@@ -91,12 +91,37 @@ export interface ChecklistItem {
   done: boolean;
 }
 
+export type ObjectiveStatus = "atingido" | "parcial" | "nao_atingido";
+
+/** Objetivo de uma sessão (vários por sessão). */
+export interface SessionObjective {
+  id: ID;
+  text: string;
+  status?: ObjectiveStatus | null;
+}
+
+/** Atividade de uma sessão (várias por sessão). */
+export interface SessionActivity {
+  id: ID;
+  title: string;
+  materials?: string;
+  duration_min?: number;
+  /** Atividade de origem na biblioteca, quando inserida a partir dela. */
+  activity_id?: ID | null;
+  done?: boolean;
+}
+
 export interface AssessmentSessionPlan {
   id: ID;
   number: number;
+  /** Texto legado (1 objetivo). Mantido em sincronia com `objectives`. */
   objective: string;
+  objectives?: SessionObjective[];
   instruments: string[];
+  activities?: SessionActivity[];
   duration_min?: number;
+  date?: string;
+  notes?: string;
 }
 
 export interface Assessment extends Base {
@@ -113,6 +138,7 @@ export interface Assessment extends Base {
   ai_justification?: string;
   clinical_notes?: string;
   observations?: string;
+  attachments?: Attachment[];
 }
 
 export interface TextItem {
@@ -124,8 +150,12 @@ export interface PlannedSession {
   id: ID;
   number: number;
   date?: string;
+  /** Textos legados, mantidos em sincronia com `objectives` / `activity_list` para relatórios e IA. */
   objective: string;
   activities: string;
+  objectives?: SessionObjective[];
+  activity_list?: SessionActivity[];
+  attachments?: Attachment[];
   materials: string;
   duration_min: number;
   strategies: string;
@@ -167,6 +197,8 @@ export interface Attachment {
   path: string;
   mime?: string;
   size?: number;
+  /** Registro correspondente na aba Documentos do paciente. */
+  document_id?: ID | null;
 }
 
 export interface ProgressScales {
@@ -203,6 +235,10 @@ export interface SessionRecord extends Base {
   progress: ProgressScales;
   attachments: Attachment[];
   ai_insights?: SessionInsights | null;
+  /** Objetivos trabalhados na sessão, com o resultado de cada um. */
+  objective_results?: SessionObjective[];
+  /** Atividades planejadas/realizadas na sessão. */
+  activity_results?: SessionActivity[];
 }
 
 export type Difficulty = "facil" | "medio" | "dificil";
@@ -345,6 +381,24 @@ export interface AssessmentRecord extends Base {
   ai_assisted?: boolean;
 }
 
+export type TaskPriority = "urgente" | "alta" | "media" | "baixa";
+export type TaskStatus = "a_fazer" | "fazendo" | "concluida";
+
+/** Tarefa de gestão e organização da clínica. */
+export interface ClinicTask extends Base {
+  title: string;
+  description?: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  category: string;
+  due_date?: string | null;
+  patient_id?: ID | null;
+  recurrence: "nenhuma" | "semanal" | "mensal" | "semestral" | "anual";
+  done_at?: string | null;
+  /** Chave de pendência automática que originou a tarefa (evita duplicar). */
+  source_key?: string | null;
+}
+
 export interface TableMap {
   patients: Patient;
   assessments: Assessment;
@@ -358,6 +412,7 @@ export interface TableMap {
   instruments: Instrument;
   assessment_records: AssessmentRecord;
   receipts: Receipt;
+  tasks: ClinicTask;
 }
 
 export type TableName = keyof TableMap;

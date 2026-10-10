@@ -175,7 +175,7 @@ function ReportsInner() {
         <PageHeader title="Relatórios e documentos" subtitle="Relatórios, encaminhamentos, declarações, atestados, planos e resumos de evolução"
           actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo documento</Button>} />
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <div className="no-print space-y-2">
           {data.length === 0 && <Card><EmptyState icon={<FileText className="h-5 w-5" />} title="Nenhum documento" text="Gere documentos a partir de modelos editáveis." /></Card>}
           {data.map((r) => (

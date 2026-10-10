@@ -49,7 +49,7 @@ export default function AssistantPage() {
   return (
     <>
       <PageHeader title="Assistente clínica" subtitle="IA especializada em Neuropsicopedagogia — apoio, nunca substituição do seu julgamento" />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <Card className="flex min-h-[60vh] flex-col">
           <div className="flex-1 space-y-4 overflow-y-auto p-5">
             {msgs.length === 0 ? (

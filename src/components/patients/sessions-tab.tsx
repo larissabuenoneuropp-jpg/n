@@ -8,8 +8,10 @@ import {
 } from "@/components/ui";
 import { LineChart } from "@/components/charts";
 import { useCollection, useData } from "@/lib/data/provider";
+import { ActivitiesEditor, AttachmentsField, ObjectivesEditor } from "@/components/sessions/editors";
+import { activitiesOf, activitiesText, OBJECTIVE_STATUS, objectiveSummary, objectivesOf, objectivesText, withActivities, withObjectives } from "@/lib/sessions";
 import { askAI, patientContext } from "@/lib/ai/client";
-import type { Attachment, Patient, ProgressScales, SessionInsights, SessionRecord } from "@/lib/types";
+import type { Patient, PlannedSession, ProgressScales, SessionInsights, SessionRecord } from "@/lib/types";
 import { formatDate, today } from "@/lib/utils";
 
 const SCALES: Array<{ key: keyof ProgressScales; label: string }> = [
@@ -20,8 +22,6 @@ const SCALES: Array<{ key: keyof ProgressScales; label: string }> = [
 ];
 
 const TEXT_FIELDS: Array<{ key: keyof SessionRecord; label: string }> = [
-  { key: "objective", label: "Objetivo da sessão" },
-  { key: "activities", label: "Atividades realizadas" },
   { key: "materials", label: "Materiais utilizados" },
   { key: "child_response", label: "Resposta da criança" },
   { key: "behavior", label: "Comportamento observado" },
@@ -31,8 +31,12 @@ const TEXT_FIELDS: Array<{ key: keyof SessionRecord; label: string }> = [
 ];
 
 function recordForAI(r: Partial<SessionRecord>) {
+  const objs = objectivesOf({ objective: r.objective, objectives: r.objective_results });
   return {
-    data: r.date, objetivo: r.objective, atividades: r.activities, resposta: r.child_response,
+    data: r.date,
+    objetivos: objs.map((o) => ({ objetivo: o.text, resultado: o.status ? OBJECTIVE_STATUS[o.status].label : "não avaliado" })),
+    atividades: activitiesOf({ activities: r.activities, activity_list: r.activity_results }).map((a) => `${a.title}${a.done === false ? " (não realizada)" : ""}`),
+    resposta: r.child_response,
     comportamento: r.behavior, evolucao: r.clinical_evolution, escalas_1a5: r.progress,
   };
 }
@@ -70,12 +74,15 @@ function SessionForm({ patient, open, onClose, initial, appointmentId, onSaved }
   const [f, setF] = useState<Partial<SessionRecord>>({});
   const [saving, setSaving] = useState(false);
   const [withAi, setWithAi] = useState(true);
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (initial) {
-      setF({ ...initial });
+      setF({
+        ...initial,
+        objective_results: objectivesOf({ objective: initial.objective, objectives: initial.objective_results }),
+        activity_results: activitiesOf({ activities: initial.activities, activity_list: initial.activity_results }),
+      });
       return;
     }
     // Pré-preenche com a próxima sessão planejada do plano ativo
@@ -84,40 +91,37 @@ function SessionForm({ patient, open, onClose, initial, appointmentId, onSaved }
     setF({
       patient_id: patient.id, date: today(), start_time: new Date().toTimeString().slice(0, 5),
       appointment_id: appointmentId ?? null, plan_id: active?.id ?? null,
-      objective: next?.objective ?? "", activities: next?.activities ?? "", materials: next?.materials ?? "",
+      // objetivos e atividades da sessão planejada, para marcar o resultado de cada um
+      objective_results: next ? objectivesOf(next).map((o) => ({ ...o, status: null })) : [],
+      activity_results: next ? activitiesOf(next).map((a) => ({ ...a, done: true })) : [],
+      materials: next?.materials ?? "",
       progress: { attention: 3, engagement: 3, autonomy: 3, goal_achievement: 3 }, attachments: [],
     });
   }, [open, initial, patient.id, appointmentId, plans.data]);
-
-  async function addFiles(files: FileList | null) {
-    if (!files?.length) return;
-    setUploading(true);
-    try {
-      const added: Attachment[] = [];
-      for (const file of Array.from(files)) {
-        const path = await store.upload(file, `sessoes/${patient.id}`);
-        added.push({ name: file.name, path, mime: file.type, size: file.size });
-      }
-      setF((s) => ({ ...s, attachments: [...(s.attachments ?? []), ...added] }));
-    } catch (e) {
-      toast(e instanceof Error ? e.message : "Falha no upload", "error");
-    } finally {
-      setUploading(false);
-    }
-  }
 
   async function save() {
     if (!f.date) return toast("Informe a data.", "error");
     setSaving(true);
     try {
-      let rec = initial ? await store.update("session_records", initial.id, f) : await store.insert("session_records", f);
-      // Marca a sessão planejada correspondente como realizada
+      const payload: Partial<SessionRecord> = {
+        ...f,
+        objective: objectivesText(f.objective_results ?? []),
+        activities: activitiesText((f.activity_results ?? []).filter((a) => a.done !== false)),
+      };
+      let rec = initial ? await store.update("session_records", initial.id, payload) : await store.insert("session_records", payload);
+      // Marca a sessão planejada como realizada e leva o resultado de cada objetivo/atividade para o plano
       if (!initial && rec.plan_id) {
         const plan = plans.data.find((p) => p.id === rec.plan_id);
         const next = plan?.schedule.find((s) => !s.done);
         if (plan && next) {
           await store.update("intervention_plans", plan.id, {
-            schedule: plan.schedule.map((s) => (s.id === next.id ? { ...s, done: true, record: rec.clinical_evolution || rec.child_response || "Realizada" } : s)),
+            schedule: plan.schedule.map((s) => {
+              if (s.id !== next.id) return s;
+              let upd: PlannedSession = { ...s, done: true, record: rec.clinical_evolution || rec.child_response || "Realizada", attachments: [...(s.attachments ?? []), ...(rec.attachments ?? [])] };
+              upd = withObjectives(upd, rec.objective_results ?? objectivesOf(s));
+              upd = withActivities(upd, rec.activity_results ?? activitiesOf(s));
+              return upd;
+            }),
           });
           bump("intervention_plans");
         }
@@ -171,6 +175,16 @@ function SessionForm({ patient, open, onClose, initial, appointmentId, onSaved }
             <Select value={f.plan_id ?? ""} onChange={(e) => setF({ ...f, plan_id: e.target.value || null })} placeholder="Nenhum" options={plans.data.map((p) => ({ value: p.id, label: p.title }))} />
           </Field>
         </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-ink-soft">Objetivos da sessão — resultado de cada um</p>
+            <ObjectivesEditor value={f.objective_results ?? []} onChange={(v) => setF({ ...f, objective_results: v })} withStatus />
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-ink-soft">Atividades realizadas</p>
+            <ActivitiesEditor value={f.activity_results ?? []} onChange={(v) => setF({ ...f, activity_results: v })} withDone />
+          </div>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {TEXT_FIELDS.map(({ key, label }) => (
             <Field key={key} label={label}>
@@ -192,19 +206,9 @@ function SessionForm({ patient, open, onClose, initial, appointmentId, onSaved }
           </div>
         </div>
         <div>
-          <p className="mb-2 text-xs font-medium text-ink-soft">Fotos e arquivos</p>
-          <div className="flex flex-wrap gap-2">
-            {(f.attachments ?? []).map((a, i) => (
-              <Badge key={i} tone="gray">
-                <Paperclip className="h-3 w-3" /> {a.name}
-                <button onClick={() => setF({ ...f, attachments: f.attachments!.filter((_, j) => j !== i) })} aria-label="Remover anexo">×</button>
-              </Badge>
-            ))}
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-line px-3 py-1.5 text-xs text-ink-soft hover:bg-canvas">
-              <Plus className="h-3.5 w-3.5" /> {uploading ? "Enviando…" : "Anexar"}
-              <input type="file" multiple accept="image/*,application/pdf,video/*,.doc,.docx" className="hidden" onChange={(e) => addFiles(e.target.files)} />
-            </label>
-          </div>
+          <p className="mb-2 text-xs font-medium text-ink-soft">Fotos e arquivos (também aparecem em Documentos)</p>
+          <AttachmentsField patientId={patient.id} value={f.attachments ?? []} onChange={(v) => setF({ ...f, attachments: v })}
+            category="sessao" context={`Registro de sessão — ${f.date ? formatDate(f.date) : ""}`} />
         </div>
       </div>
     </Modal>
@@ -313,7 +317,7 @@ export function SessionsTab({ patient, autoNew, appointmentId }: { patient: Pati
               <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-3">
                 <div>
                   <p className="text-sm font-semibold">{formatDate(r.date, { weekday: "short", day: "2-digit", month: "long", year: "numeric" })}{r.start_time ? ` · ${r.start_time.slice(0, 5)}` : ""}</p>
-                  <p className="text-xs text-ink-soft">{r.objective || "Sem objetivo registrado"}</p>
+                  <p className="text-xs text-ink-soft">{(() => { const sm = objectiveSummary(objectivesOf({ objective: r.objective, objectives: r.objective_results })); return sm.total ? `${sm.total} objetivo(s) · ${sm.atingido} atingido(s), ${sm.parcial} parcial(is), ${sm.nao} não atingido(s)` : "Sem objetivos registrados"; })()}</p>
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => { setEditing(r); setOpen(true); }} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
@@ -322,7 +326,32 @@ export function SessionsTab({ patient, autoNew, appointmentId }: { patient: Pati
               </div>
               <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
                 <dl className="space-y-2 text-sm">
-                  {TEXT_FIELDS.slice(1).map(({ key, label }) =>
+                  {(() => {
+                    const objs = objectivesOf({ objective: r.objective, objectives: r.objective_results });
+                    const acts = activitiesOf({ activities: r.activities, activity_list: r.activity_results });
+                    return (
+                      <>
+                        {objs.length > 0 && (
+                          <div>
+                            <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">Objetivos</dt>
+                            <dd><ul className="mt-0.5 space-y-1">{objs.map((o) => (
+                              <li key={o.id} className="flex items-start gap-2 text-ink-soft">
+                                <span className="flex-1">{o.text}</span>
+                                {o.status ? <Badge tone={OBJECTIVE_STATUS[o.status].tone}>{OBJECTIVE_STATUS[o.status].label}</Badge> : <Badge>Não avaliado</Badge>}
+                              </li>
+                            ))}</ul></dd>
+                          </div>
+                        )}
+                        {acts.length > 0 && (
+                          <div>
+                            <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">Atividades</dt>
+                            <dd className="text-ink-soft">{acts.map((a) => <p key={a.id} className={a.done === false ? "line-through opacity-60" : ""}>• {a.title}{a.duration_min ? ` (${a.duration_min} min)` : ""}</p>)}</dd>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                  {TEXT_FIELDS.map(({ key, label }) =>
                     r[key] ? (
                       <div key={key}>
                         <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">{label}</dt>

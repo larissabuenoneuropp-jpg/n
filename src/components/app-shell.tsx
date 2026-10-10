@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  BookOpen, CalendarDays, ClipboardCheck, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
+  BookOpen, CalendarDays, ClipboardCheck, ListChecks, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Avatar } from "./ui";
@@ -15,6 +15,7 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 export const NAV = [
   { href: "/dashboard", label: "Início", icon: LayoutDashboard },
   { href: "/agenda", label: "Agenda", icon: CalendarDays },
+  { href: "/tarefas", label: "Tarefas", icon: ListChecks },
   { href: "/pacientes", label: "Pacientes", icon: Users },
   { href: "/testes", label: "Testes e protocolos", icon: ClipboardCheck },
   { href: "/atividades", label: "Atividades", icon: BookOpen },

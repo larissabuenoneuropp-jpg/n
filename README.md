@@ -21,7 +21,7 @@ Sem as variáveis do Supabase, o app abre em **modo demonstração**: dados fict
 ### Produção (Supabase + OpenAI)
 
 1. Crie um projeto no [Supabase](https://supabase.com).
-2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) e `0003_contracts_receipts.sql` (dados do contrato e recibos).
+2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) e `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações).
 3. Em *Authentication › URL Configuration*, adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento.
 4. Preencha `.env.local`:
    ```
@@ -51,6 +51,9 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 | **Pacientes** | Prontuário completo (foto, idade automática, responsáveis, escola, diagnóstico/hipóteses, convênio/particular, valor, frequência…) com abas: Informações gerais/anamnese · Avaliações · Plano de intervenção · Sessões e evolução · Documentos |
 | **Avaliações** | Objetivo, hipóteses, instrumentos (Planejado → Aplicado → Corrigido → No relatório), checklist, datas, anotações. **Plano de avaliação por IA** (instrumentos, ordem, nº de sessões, justificativa, objetivos por sessão) — tudo editável. Em cada instrumento: **roteiro de aplicação** e **registro clínico** com sugestão da IA, revisados antes de salvar no prontuário |
 | **Evolução quantitativa** | Pontuações de cada aplicação (inicial, intermediária, reavaliação) em gráfico e tabela com variação e leitura de melhora/piora conforme o sentido de cada medida |
+| **Objetivos e atividades por sessão** | Avaliação e intervenção: vários objetivos (sem limite) e várias atividades por sessão, cada atividade com materiais e tempo; atividades inseridas da biblioteca; resultado por objetivo (atingido / parcial / não atingido) no registro da sessão, levado automaticamente ao plano. IA sugere de 3 a 5 objetivos e de 2 a 4 atividades por sessão |
+| **Anexos** | Em cada avaliação, sessão do plano e registro de sessão; todos aparecem também na aba Documentos do paciente |
+| **Tarefas da clínica** | Lista com prioridade (urgente/alta/média/baixa), categoria, prazo, repetição e paciente; rotina de gestão sugerida (inclui prazos do contrato: reunião semestral, revisão do plano, reajuste IGPM em julho); pendências detectadas automaticamente (atrasos, contratos, sessões sem registro, confirmações, correções, revisões); destaque no Início |
 | **Contrato** | Gerado automaticamente ao cadastrar o paciente, no modelo da profissional: responsável (nome, CPF, RG, endereço, contatos), criança, sessões por semana (com extenso), duração, valores de avaliação e intervenção (com extenso), cidade/foro e data. Rascunho editável; botão para atualizar com o cadastro; impressão em papel timbrado |
 | **Recibo** | Emitido automaticamente quando uma entrada é marcada como paga, no layout do modelo da profissional (A4), com dados do pagante, valor, datas dos atendimentos do período e dados da prestadora. Numeração sequencial, edição, PDF e envio por WhatsApp. Não é nota fiscal |
 | **Financeiro por paciente** | Aba no prontuário com total pago, a vencer, em atraso, gráfico mensal, lançamentos, cobrança rápida de sessão/avaliação e recibos |

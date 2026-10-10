@@ -20,12 +20,13 @@ Formato JSON:
 {
   "objective": string,
   "instruments": [{ "name": string, "justification": string, "session": number }],
-  "sessions": [{ "number": number, "objective": string, "instruments": string[], "duration_min": number }],
+  "sessions": [{ "number": number, "objectives": string[], "instruments": string[], "activities": string[], "duration_min": number }],
   "total_sessions": number,
   "justification": string,
   "checklist": string[],
   "warnings": string[]
 }
+Cada sessão deve ter de 2 a 4 objetivos específicos ("objectives"); "activities" são atividades complementares opcionais (ex.: vínculo, observação lúdica).
 Ordene os instrumentos na sequência sugerida de aplicação. Em "warnings" inclua limitações de escopo ou informações faltantes.
 Se a entrada trouxer "biblioteca_de_instrumentos", prefira esses nomes exatamente como escritos e NÃO sugira aplicar os de acesso "psicologo".
 Itens de acesso "verificar" podem ser sugeridos com um aviso em "warnings".`,
@@ -38,9 +39,15 @@ Formato JSON:
   "specific_objectives": string[],
   "goals": string[],
   "progress_criteria": string,
-  "sessions": [{ "number": number, "objective": string, "activities": string, "materials": string, "duration_min": number, "strategies": string, "success_criteria": string }]
+  "sessions": [{
+    "number": number,
+    "objectives": string[],
+    "activities": [{ "title": string, "materials": string, "duration_min": number }],
+    "materials": string, "duration_min": number, "strategies": string, "success_criteria": string
+  }]
 }
-Gere o número de sessões solicitado (padrão 8), com progressão gradual de complexidade.`,
+Gere o número de sessões solicitado (padrão 8), com progressão gradual de complexidade.
+Cada sessão deve ter de 3 a 5 objetivos específicos, observáveis e mensuráveis, e de 2 a 4 atividades cuja soma de tempo caiba na duração da sessão.`,
 
   session_insights: `Analise o registro da sessão (e o histórico recente, se houver) e sugira os próximos passos.
 Formato JSON:
@@ -100,7 +107,13 @@ Formato JSON:
   plan_session: `Sugira o conteúdo de UMA sessão de intervenção para o objetivo informado, coerente com o plano e o perfil da criança.
 Se houver atividades da biblioteca da profissional na entrada, prefira-as.
 Formato JSON:
-{ "objective": string, "activities": string, "materials": string, "duration_min": number, "strategies": string, "success_criteria": string }`,
+{
+  "objectives": string[],
+  "activities": [{ "title": string, "materials": string, "duration_min": number }],
+  "materials": string, "duration_min": number, "strategies": string, "success_criteria": string
+}
+Inclua de 3 a 5 objetivos específicos, observáveis e mensuráveis, e de 2 a 4 atividades cuja soma de tempo caiba na sessão.
+Se houver "objetivos_atuais", mantenha-os e complemente. Considere o resultado das sessões anteriores (objetivos não atingidos podem ser retomados).`,
 
   chat: `Responda à pergunta da profissional de forma objetiva.
 Formato JSON: { "answer": string }`,
