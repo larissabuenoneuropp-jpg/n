@@ -5,7 +5,7 @@ import type { DataStore, ListOptions } from "./store";
 
 const TABLES: TableName[] = [
   "patients", "assessments", "intervention_plans", "appointments", "session_records",
-  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks",
+  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts",
 ];
 const BUCKET = "documents";
 

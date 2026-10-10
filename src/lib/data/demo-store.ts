@@ -7,7 +7,7 @@ import { buildSeed } from "./seed";
 const PREFIX = "np:demo:";
 const TABLES: TableName[] = [
   "patients", "assessments", "intervention_plans", "appointments", "session_records",
-  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks",
+  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts",
 ];
 
 function read<T>(key: string, fallback: T): T {
@@ -57,6 +57,11 @@ export class DemoStore implements DataStore {
     if (typeof window !== "undefined" && !read("seeded_v4", false)) {
       if (read<unknown[]>("tasks", []).length === 0) write("tasks", buildSeed().tasks);
       write("seeded_v4", true);
+    }
+    // v5: conteúdos de Instagram de exemplo
+    if (typeof window !== "undefined" && !read("seeded_v5", false)) {
+      if (read<unknown[]>("social_posts", []).length === 0) write("social_posts", buildSeed().social_posts);
+      write("seeded_v5", true);
     }
   }
 

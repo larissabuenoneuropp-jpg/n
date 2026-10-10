@@ -123,6 +123,37 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
         strategies: "Modelagem, pistas graduais, reforço positivo. [MODO DEMONSTRAÇÃO]",
         success_criteria: "80% de acertos com apoio mínimo.",
       };
+    case "social_post": {
+      const theme = String(input.tema ?? "dificuldades de aprendizagem");
+      const format = String(input.formato ?? "carrossel");
+      return {
+        title: `O que ninguém te conta sobre ${theme.toLowerCase()}`,
+        hook: `Seu filho se esforça, mas ${theme.toLowerCase()} continua sendo um desafio?`,
+        slides: format === "reels" ? [] : [
+          { title: "Não é falta de vontade", text: "Muitas crianças se esforçam e, mesmo assim, aprender cansa mais do que deveria." },
+          { title: "Sinais que merecem atenção", text: "Evitar tarefas, demorar muito, esquecer o que acabou de aprender ou ficar frustrado com facilidade." },
+          { title: "Um exemplo (fictício)", text: "Imagine uma criança de 8 anos que lê devagar e trava na escrita. Com estratégias certas, ela ganha confiança." },
+          { title: "Como a neuropsicopedagogia ajuda", text: "Avaliamos como a criança aprende e criamos um plano com objetivos claros." },
+          { title: "Vamos conversar?", text: "Me chame no WhatsApp do perfil para agendar uma conversa." },
+        ].slice(0, format === "post" ? 1 : 5),
+        caption: `Quando aprender dói, a criança não precisa de mais cobrança — precisa de compreensão e estratégia. 💛\n\nSe você se identificou, salve este post e me chame para conversar.\n\n[MODO DEMONSTRAÇÃO — configure a OpenAI para conteúdo personalizado]`,
+        hashtags: ["#neuropsicopedagogia", "#neuropsicopedagoga", "#dificuldadesdeaprendizagem", "#maternidade", "#educacaoinfantil", "#aprendizagem", "#balneariocamboriu"],
+        cta: "Agende uma conversa pelo WhatsApp",
+        reels: format === "reels" ? {
+          duration_s: 30, audio_suggestion: "Áudio instrumental suave em alta",
+          scenes: [
+            { time: "0–3s", visual: "Você olhando para a câmera", on_screen_text: "Não é preguiça.", voiceover: "Se o seu filho se esforça e mesmo assim não consegue..." },
+            { time: "3–12s", visual: "Mãos organizando materiais", on_screen_text: "3 sinais de atenção", voiceover: "Fique atenta a três sinais..." },
+            { time: "12–25s", visual: "Materiais pedagógicos", on_screen_text: "Existe caminho", voiceover: "Com avaliação e estratégias, a aprendizagem flui melhor." },
+            { time: "25–30s", visual: "Logo e contato", on_screen_text: "Agende uma conversa", voiceover: "Me chama no direct!" },
+          ],
+        } : null,
+        stories: ["Enquete: seu filho evita fazer a lição? Sim / Às vezes", "Caixinha: qual sua maior dúvida sobre aprendizagem?", "Convite para agendar conversa"],
+        design_tips: "Use as cores da marca, fonte grande e no máximo 30 palavras por slide.",
+        best_time: "Terça ou quinta, entre 19h e 21h (confirme nas suas métricas).",
+        privacy_notes: "Exemplo fictício; nenhum dado de paciente utilizado.",
+      };
+    }
     case "chat":
       return { answer: "[MODO DEMONSTRAÇÃO] Configure OPENAI_API_KEY para conversar com a assistente clínica." };
   }

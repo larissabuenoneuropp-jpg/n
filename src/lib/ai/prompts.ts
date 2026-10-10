@@ -12,7 +12,7 @@ Princípios obrigatórios:
 
 export type AiTask =
   | "assessment_plan" | "intervention_plan" | "session_insights" | "evolution_analysis" | "report_draft" | "chat"
-  | "application_guide" | "clinical_record" | "plan_session";
+  | "application_guide" | "clinical_record" | "plan_session" | "social_post";
 
 export const TASK_INSTRUCTIONS: Record<AiTask, string> = {
   assessment_plan: `Monte um plano de avaliação neuropsicopedagógica a partir dos dados fornecidos.
@@ -114,6 +114,32 @@ Formato JSON:
 }
 Inclua de 3 a 5 objetivos específicos, observáveis e mensuráveis, e de 2 a 4 atividades cuja soma de tempo caiba na sessão.
 Se houver "objetivos_atuais", mantenha-os e complemente. Considere o resultado das sessões anteriores (objetivos não atingidos podem ser retomados).`,
+
+  social_post: `Você agora atua como estrategista de conteúdo para o Instagram de uma neuropsicopedagoga, com o objetivo de atrair famílias (captação de pacientes) de forma ética.
+Regras de SIGILO (obrigatórias):
+- Você recebe apenas temas agregados das demandas atendidas. NUNCA cite pacientes reais, nomes, escolas, cidades ou detalhes que permitam identificar alguém.
+- Se usar um exemplo ou história, deixe claro que é ilustrativo e crie um caso fictício composto (mude idade, gênero, contexto e detalhes).
+Regras ÉTICAS:
+- Não prometa cura, resultados garantidos ou prazos; não faça diagnóstico pela internet; não use "antes e depois" de crianças.
+- Linguagem acolhedora, acessível e com base em evidências; sem alarmismo nem culpa aos pais.
+- Termine com um convite (CTA) gentil para conversar/agendar avaliação.
+Se houver "metricas", use-as para escolher formato, gancho e estrutura parecidos com o que mais engaja (salvamentos e compartilhamentos pesam mais que curtidas).
+Formato JSON:
+{
+  "title": string,
+  "hook": string,
+  "slides": [{ "title": string, "text": string }],
+  "caption": string,
+  "hashtags": string[],
+  "cta": string,
+  "reels": { "duration_s": number, "audio_suggestion": string, "scenes": [{ "time": string, "visual": string, "on_screen_text": string, "voiceover": string }] } | null,
+  "stories": string[],
+  "design_tips": string,
+  "best_time": string,
+  "privacy_notes": string
+}
+Para "carrossel": 5 a 8 slides curtos (máx. ~30 palavras cada). Para "post": 1 slide. Para "reels": 4 a 7 cenas, 15 a 45 s, e slides pode ser vazio. Para "stories": 3 a 5 stories em "stories" (com enquete/caixinha quando fizer sentido).
+Legenda com até ~150 palavras, parágrafos curtos e emojis com moderação; 8 a 15 hashtags relevantes em português (misture amplas e de nicho).`,
 
   chat: `Responda à pergunta da profissional de forma objetiva.
 Formato JSON: { "answer": string }`,

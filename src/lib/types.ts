@@ -399,6 +399,50 @@ export interface ClinicTask extends Base {
   source_key?: string | null;
 }
 
+export type SocialFormat = "carrossel" | "post" | "reels" | "stories";
+export type SocialStatus = "ideia" | "rascunho" | "agendado" | "publicado";
+
+export interface SocialSlide { title: string; text: string }
+export interface ReelScene { time: string; visual: string; on_screen_text: string; voiceover: string }
+
+export interface SocialContent {
+  hook: string;
+  slides: SocialSlide[];
+  caption: string;
+  hashtags: string[];
+  cta: string;
+  reels?: { duration_s: number; audio_suggestion: string; scenes: ReelScene[] } | null;
+  stories?: string[];
+  design_tips?: string;
+  best_time?: string;
+  privacy_notes?: string;
+}
+
+export interface SocialMetrics {
+  reach?: number;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  saves?: number;
+  shares?: number;
+}
+
+/** Conteúdo para Instagram (calendário editorial). */
+export interface SocialPost extends Base {
+  title: string;
+  format: SocialFormat;
+  theme?: string;
+  audience?: string;
+  goal?: string;
+  status: SocialStatus;
+  scheduled_for?: string | null;
+  published_at?: string | null;
+  content: SocialContent;
+  metrics?: SocialMetrics;
+  ig_media_id?: string | null;
+  permalink?: string | null;
+}
+
 export interface TableMap {
   patients: Patient;
   assessments: Assessment;
@@ -413,6 +457,7 @@ export interface TableMap {
   assessment_records: AssessmentRecord;
   receipts: Receipt;
   tasks: ClinicTask;
+  social_posts: SocialPost;
 }
 
 export type TableName = keyof TableMap;

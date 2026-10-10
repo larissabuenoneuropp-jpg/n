@@ -1,0 +1,14 @@
+# Deploy do NeuroPlanner no Netlify (Next.js com rotas de servidor, middleware e IA).
+# Importante: este app NÃO funciona por "arrastar e soltar" a pasta (Netlify Drop),
+# porque precisa ser compilado no Netlify. Use "Import from Git" ou a Netlify CLI — veja o README.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  BookOpen, CalendarDays, ClipboardCheck, ListChecks, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
+  BookOpen, CalendarDays, ClipboardCheck, ListChecks, Megaphone, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Avatar } from "./ui";
@@ -22,6 +22,7 @@ export const NAV = [
   { href: "/documentos", label: "Documentos", icon: FolderOpen },
   { href: "/relatorios", label: "Relatórios", icon: FileText },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/instagram", label: "Instagram", icon: Megaphone },
   { href: "/assistente", label: "Assistente IA", icon: Sparkles },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];

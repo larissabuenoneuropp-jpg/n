@@ -48,7 +48,9 @@ export async function POST(req: Request) {
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  // Em produção sem Supabase (sem login), não expor a chave da OpenAI a qualquer visitante.
+  const publicDemo = !isSupabaseConfigured && process.env.NODE_ENV === "production" && process.env.ALLOW_PUBLIC_AI !== "1";
+  if (!apiKey || publicDemo) {
     return NextResponse.json({ demo: true, result: mockResponse(task, body.input ?? {}) });
   }
 

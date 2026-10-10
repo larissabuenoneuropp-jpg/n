@@ -6,7 +6,7 @@ import { ACTIVITY_LIBRARY } from "./activities-library";
 import { INSTRUMENT_LIBRARY } from "./instruments-library";
 import { DEFAULT_TEMPLATES } from "@/lib/templates";
 import { routineTasks } from "@/lib/tasks";
-import type { ClinicTask } from "@/lib/types";
+import type { ClinicTask, SocialPost } from "@/lib/types";
 
 /** Dados fictícios para o modo demonstração. */
 export function buildSeed() {
@@ -210,6 +210,39 @@ export function buildSeed() {
   const activities: Activity[] = ACTIVITY_LIBRARY.map((a, i) => ({ ...a, id: uid(), favorite: i < 3 }));
 
   const reports: Report[] = [];
+  const social_posts: SocialPost[] = [
+    {
+      id: uid(), title: "5 sinais de dificuldade na leitura", format: "carrossel", theme: "Dislexia / leitura", audience: "Pais", goal: "Captar pacientes",
+      status: "publicado", published_at: iso(addDays(now, -20)),
+      content: {
+        hook: "Seu filho lê devagar e troca letras? Pode não ser preguiça.",
+        slides: [
+          { title: "Pode não ser preguiça", text: "Algumas crianças se esforçam muito e, mesmo assim, a leitura não flui." },
+          { title: "Sinais de atenção", text: "Leitura silabada, trocas como p/b e f/v, cansaço ao ler e fuga das tarefas." },
+          { title: "O que fazer", text: "Uma avaliação neuropsicopedagógica ajuda a entender como a criança aprende." },
+          { title: "Vamos conversar?", text: "Agende uma conversa pelo WhatsApp do perfil." },
+        ],
+        caption: "Ler com dificuldade não é falta de vontade. 💛 Quando a leitura cansa, a criança precisa de um olhar cuidadoso.", hashtags: ["#neuropsicopedagogia", "#dislexia", "#leitura"], cta: "Agende pelo WhatsApp",
+      },
+      metrics: { reach: 1840, likes: 132, comments: 14, saves: 61, shares: 38 },
+    },
+    {
+      id: uid(), title: "Rotina visual para crianças com TDAH", format: "reels", theme: "TDAH / atenção", audience: "Pais", goal: "Educar",
+      status: "publicado", published_at: iso(addDays(now, -9)),
+      content: {
+        hook: "3 minutos que mudam a manhã da sua casa", slides: [],
+        caption: "Rotina visual: simples, barata e funciona para muitas famílias.", hashtags: ["#tdah", "#rotina"], cta: "Salve para testar amanhã",
+        reels: { duration_s: 30, audio_suggestion: "Áudio calmo em alta", scenes: [{ time: "0–3s", visual: "Quadro de rotina", on_screen_text: "Manhãs caóticas?", voiceover: "Se as manhãs na sua casa são uma correria..." }] },
+      },
+      metrics: { views: 5200, reach: 3900, likes: 210, comments: 22, saves: 140, shares: 95 },
+    },
+    {
+      id: uid(), title: "Bastidores do consultório", format: "post", theme: "Institucional", audience: "Pais", goal: "Autoridade",
+      status: "publicado", published_at: iso(addDays(now, -30)),
+      content: { hook: "Um espaço pensado para aprender brincando", slides: [], caption: "Cada material tem um porquê.", hashtags: ["#neuropsicopedagoga"], cta: "Conheça o espaço" },
+      metrics: { reach: 900, likes: 70, comments: 5, saves: 6, shares: 2 },
+    },
+  ];
   const tasks: ClinicTask[] = routineTasks(now).map((t) => ({ ...(t as ClinicTask), id: uid() }));
 
   const instruments: Instrument[] = INSTRUMENT_LIBRARY.map((i) => ({ ...i, id: uid(), favorite: false }));
@@ -249,6 +282,6 @@ export function buildSeed() {
 
   return {
     patients, assessments, intervention_plans: plans, appointments, session_records: sessions,
-    activities, documents: [], transactions, reports, profile, instruments, assessment_records, receipts, tasks,
+    activities, documents: [], transactions, reports, profile, instruments, assessment_records, receipts, tasks, social_posts,
   };
 }

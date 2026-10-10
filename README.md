@@ -21,7 +21,7 @@ Sem as variáveis do Supabase, o app abre em **modo demonstração**: dados fict
 ### Produção (Supabase + OpenAI)
 
 1. Crie um projeto no [Supabase](https://supabase.com).
-2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) e `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações).
+2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações) e `0005_social_posts.sql` (conteúdos de Instagram).
 3. Em *Authentication › URL Configuration*, adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento.
 4. Preencha `.env.local`:
    ```
@@ -54,6 +54,7 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 | **Objetivos e atividades por sessão** | Avaliação e intervenção: vários objetivos (sem limite) e várias atividades por sessão, cada atividade com materiais e tempo; atividades inseridas da biblioteca; resultado por objetivo (atingido / parcial / não atingido) no registro da sessão, levado automaticamente ao plano. IA sugere de 3 a 5 objetivos e de 2 a 4 atividades por sessão |
 | **Anexos** | Em cada avaliação, sessão do plano e registro de sessão; todos aparecem também na aba Documentos do paciente |
 | **Tarefas da clínica** | Lista com prioridade (urgente/alta/média/baixa), categoria, prazo, repetição e paciente; rotina de gestão sugerida (inclui prazos do contrato: reunião semestral, revisão do plano, reajuste IGPM em julho); pendências detectadas automaticamente (atrasos, contratos, sessões sem registro, confirmações, correções, revisões); destaque no Início |
+| **Instagram** | Criador de carrosséis, posts, reels (roteiro por cena) e stories a partir das demandas atendidas (apenas temas e contagens), com foco em captação ética; exemplos sempre fictícios; checagem automática contra nomes de pacientes/responsáveis e escolas; artes 1080×1350 nas cores da marca (PNG); calendário editorial; métricas do Instagram (API da Meta) ou digitadas, usadas para orientar a IA |
 | **Contrato** | Gerado automaticamente ao cadastrar o paciente, no modelo da profissional: responsável (nome, CPF, RG, endereço, contatos), criança, sessões por semana (com extenso), duração, valores de avaliação e intervenção (com extenso), cidade/foro e data. Rascunho editável; botão para atualizar com o cadastro; impressão em papel timbrado |
 | **Recibo** | Emitido automaticamente quando uma entrada é marcada como paga, no layout do modelo da profissional (A4), com dados do pagante, valor, datas dos atendimentos do período e dados da prestadora. Numeração sequencial, edição, PDF e envio por WhatsApp. Não é nota fiscal |
 | **Financeiro por paciente** | Aba no prontuário com total pago, a vencer, em atraso, gráfico mensal, lançamentos, cobrança rápida de sessão/avaliação e recibos |
@@ -95,6 +96,36 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 - **Criptografia de campo** (além da criptografia em repouso do provedor) não foi implementada; avaliar `pgsodium`/Vault para campos específicos.
 - Não há testes automatizados no repositório ainda (os fluxos foram verificados manualmente no navegador).
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.
+
+## Publicar no Netlify
+
+> **Importante:** o NeuroPlanner é um app Next.js com rotas de servidor (IA, Instagram, login). Ele **não funciona arrastando a pasta ou o ZIP** para o Netlify Drop — essa opção só publica sites estáticos. O Netlify precisa **compilar** o projeto. O arquivo `netlify.toml` já está configurado.
+
+**Opção A — pelo GitHub (recomendada):**
+1. No Netlify: *Add new site → Import an existing project → GitHub* e escolha o repositório (branch `claude/funny-bardeen-wq2gyr` ou a principal, depois do merge).
+2. O Netlify lê o `netlify.toml` (build `npm run build`, Node 22, plugin Next.js).
+3. Em *Site configuration → Environment variables*, cadastre as variáveis do `.env.example` (Supabase, OpenAI e, se quiser, Instagram).
+4. Deploy. No Supabase, adicione `https://SEU-SITE.netlify.app/auth/callback` nas URLs de redirecionamento.
+
+**Opção B — a partir do ZIP, com a Netlify CLI:**
+```bash
+unzip neuroplanner.zip && cd neuroplanner
+npm install
+npx netlify-cli login
+npx netlify-cli deploy --build --prod
+```
+
+**Segurança no site publicado:** sem Supabase configurado o site abre em modo demonstração para qualquer visitante; nesse caso a IA real e as métricas reais do Instagram ficam **desligadas** de propósito (para ninguém usar sua chave). Configure o Supabase antes de usar com pacientes.
+
+## Conectar o Instagram (métricas)
+
+Requer conta **Profissional** (Empresa ou Criador de conteúdo). Pela API oficial da Meta:
+1. Crie um app em *developers.facebook.com* e adicione o produto do Instagram.
+2. Conecte sua conta e gere um **token de acesso de longa duração** com permissão de leitura de insights.
+3. Copie o **ID da conta do Instagram** e defina no servidor (Netlify → Environment variables): `INSTAGRAM_ACCESS_TOKEN` e `INSTAGRAM_USER_ID`.
+4. Opcional: `INSTAGRAM_GRAPH_BASE` e `INSTAGRAM_INSIGHT_METRICS`.
+
+> A Meta muda com frequência versões da API, nomes de métricas e o processo de geração de token (e tokens de longa duração expiram e precisam ser renovados). **Confira a documentação atual da Meta** — os valores padrão do app podem precisar de ajuste. O app não publica no Instagram: ele lê métricas; a publicação continua sendo feita por você (as artes e a legenda ficam prontas para baixar e copiar). Sem token, você pode digitar as métricas de cada post no Calendário.
 
 ## Identidade visual nos documentos
 
