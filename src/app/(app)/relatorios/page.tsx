@@ -144,7 +144,7 @@ function ReportEditor({ report, patient, onSave, onDelete }: { report: Report; p
         {view === "editar" && <p className="hidden text-[11px] text-ink-faint sm:block">Marcação: ## seção · ### subseção · #### tópico · [[legenda]] · | quadro | colunas |</p>}
       </div>
       {view === "editar" ? (
-        <Textarea className="no-print min-h-[60vh] font-mono text-[13px]" value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} />
+        <Textarea className="no-print min-h-[60vh] font-mono text-sm" value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} />
       ) : (
         <Card className="no-print mx-auto max-w-[210mm] px-[18mm] py-[14mm]"><DocBody content={f.content} /></Card>
       )}

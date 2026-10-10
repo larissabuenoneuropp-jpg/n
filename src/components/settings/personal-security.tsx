@@ -84,7 +84,7 @@ export function AccessKeyCard() {
       <div className="space-y-3 p-5 text-sm text-ink-soft">
         <p className="text-xs">
           Protege a sua chave da OpenAI e as métricas do Instagram: o servidor só atende quem enviar esta chave. Crie uma sequência longa (32+ caracteres),
-          cadastre no Netlify como <code className="rounded bg-canvas px-1">APP_ACCESS_KEY</code> e cole a mesma aqui. Ela fica guardada dentro do cofre criptografado e não vai para os backups.
+          cadastre no Netlify como <code className="rounded-sm bg-canvas px-1">APP_ACCESS_KEY</code> e cole a mesma aqui. Ela fica guardada dentro do cofre criptografado e não vai para os backups.
         </p>
         <div className="flex gap-2">
           <Input type={show ? "text" : "password"} value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} placeholder="Cole a chave de acesso" />

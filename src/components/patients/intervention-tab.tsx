@@ -310,7 +310,7 @@ function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPla
           </div>
         }
       />
-      <div className="h-1 bg-slate-100"><div className="h-1 bg-gradient-to-r from-brand-400 to-sage-400" style={{ width: `${pct}%` }} /></div>
+      <div className="h-1 bg-slate-100"><div className="h-1 bg-linear-to-r from-brand-400 to-sage-400" style={{ width: `${pct}%` }} /></div>
       <div className="space-y-6 p-5">
         <div className="grid gap-3 sm:grid-cols-4">
           <Field label="Título" className="sm:col-span-2"><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>

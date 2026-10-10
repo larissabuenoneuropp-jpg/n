@@ -136,7 +136,7 @@ function Gate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-white to-sage-50 px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-brand-50 via-white to-sage-50 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <Logo />
@@ -204,10 +204,10 @@ function SetupForm({ onDone }: { onDone: (migrated: boolean) => void }) {
         <Input type="password" autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} />
       </Field>
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
-        <b>Importante:</b> não existe “esqueci a senha”. Se você perder a senha, os dados deste navegador <b>não podem ser recuperados</b> — nem por mim, nem por ninguém. Anote-a em lugar seguro e faça backups.
+        <b>Importante:</b> não existe “esqueci a senha”. Se você perder a senha, os dados deste navegador <b>não podem ser recuperados</b> por ninguém. Anote-a em lugar seguro e faça backups.
       </div>
       <label className="flex items-start gap-2 text-xs text-ink-soft">
-        <input type="checkbox" className="mt-0.5" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+        <input type="checkbox" className="mt-0.5 accent-brand-600" checked={ack} onChange={(e) => setAck(e.target.checked)} />
         Anotei minha senha em lugar seguro e entendi que sem ela não há recuperação.
       </label>
       {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{err}</p>}

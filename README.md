@@ -108,9 +108,11 @@ Resumo do que está implementado (e do que **não** está), item por item:
 | Respostas enxutas | APIs devolvem só os campos necessários; textos externos truncados. |
 | Cabeçalhos de segurança | CSP (produção), HSTS, X-Frame-Options, nosniff, COOP, CORP, Permissions-Policy, Referrer-Policy. |
 | HTTPS | Redirecionamento para HTTPS no middleware + HSTS (o Netlify já serve com HTTPS). |
-| Scan de dependências | `npm audit` no GitHub Actions (toda segunda e a cada push) + Dependabot semanal. Dependências usadas pelo site: **0 vulnerabilidades** conhecidas (out/2026). As do Tailwind 3 (só na compilação, com arquivos do próprio projeto) dependem de migrar para o Tailwind 4. |
+| Scan de dependências | `npm audit` no GitHub Actions (toda segunda e a cada push) + Dependabot semanal. **0 vulnerabilidades conhecidas** em todas as dependências, inclusive as de compilação (out/2026), após migrar para o Tailwind 4. |
 
-Também: logs de auditoria (criar/alterar/excluir) e exportação completa dos dados.
+Também: logs de auditoria (criar/alterar/excluir) e exportação completa dos dados. O banco tem testes automáticos em PostgreSQL real (`scripts/test-db.sh`, também no GitHub Actions): RLS, mass assignment, paciente de outra conta, acesso anônimo e storage.
+
+Navegadores: o Tailwind 4 exige versões atuais (Chrome/Edge 111+, Safari 16.4+, Firefox 128+).
 
 ## Limitações conhecidas (seja transparente com as usuárias)
 

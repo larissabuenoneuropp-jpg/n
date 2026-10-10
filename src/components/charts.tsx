@@ -29,7 +29,7 @@ function Legend({ series }: { series: Series[] }) {
     <div className="flex flex-wrap gap-x-4 gap-y-1">
       {series.map((s, i) => (
         <span key={s.key} className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SERIES_COLORS[i] }} />
+          <span className="h-2.5 w-2.5 rounded-xs" style={{ background: SERIES_COLORS[i] }} />
           {s.label}
         </span>
       ))}
@@ -135,7 +135,7 @@ export function BarChart(props: ChartProps) {
             <p className="mb-1 font-medium text-ink">{data[hover][xKey]}</p>
             {series.map((s, j) => (
               <p key={s.key} className="flex items-center gap-1.5 text-ink-soft">
-                <span className="h-2 w-2 rounded-sm" style={{ background: SERIES_COLORS[j] }} />
+                <span className="h-2 w-2 rounded-xs" style={{ background: SERIES_COLORS[j] }} />
                 {s.label}: <span className="tabular-nums text-ink">{format(Number(data[hover][s.key] ?? 0))}</span>
               </p>
             ))}

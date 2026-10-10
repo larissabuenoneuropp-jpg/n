@@ -187,7 +187,7 @@ export function ApplyInstrumentModal({ open, onClose, patient, assessment, item,
               <Button variant="ai" size="sm" onClick={genGuide} loading={loading === "guide"}><Sparkles className="h-3.5 w-3.5" /> {guide ? "Refazer com IA" : "Gerar roteiro com IA"}</Button>
             </div>
             {demo !== null && <AiNotice demo={demo} />}
-            <Textarea rows={16} className="text-[13px]" placeholder="Escreva ou gere o roteiro de aplicação…" value={guide} onChange={(e) => setGuide(e.target.value)} />
+            <Textarea rows={16} className="text-sm" placeholder="Escreva ou gere o roteiro de aplicação…" value={guide} onChange={(e) => setGuide(e.target.value)} />
             <p className="text-[11px] text-ink-faint">O roteiro organiza a sessão; itens, instruções e correção seguem o manual oficial (a IA não reproduz conteúdo protegido).</p>
           </div>
         ) : (

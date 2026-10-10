@@ -6,11 +6,11 @@ import { cn, initials } from "@/lib/utils";
 /* ---------------------------------- Button --------------------------------- */
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "ai";
 const variants: Record<Variant, string> = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-sm",
+  primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-xs",
   secondary: "bg-white text-ink border border-line hover:bg-canvas",
   ghost: "text-ink-soft hover:bg-canvas hover:text-ink",
   danger: "bg-white text-red-600 border border-red-200 hover:bg-red-50",
-  ai: "bg-sage-700 text-white hover:bg-sage-600 shadow-sm",
+  ai: "bg-sage-700 text-white hover:bg-sage-600 shadow-xs",
 };
 
 export const Button = forwardRef<
@@ -22,7 +22,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-200",
         size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm",
         variants[variant],
         className,
@@ -58,7 +58,7 @@ export function CardHeader({ title, action, icon, subtitle }: { title: string; a
 /** Largura total por padrão, a menos que a classe recebida já defina uma largura. */
 const widthOf = (className?: string) => (/(^|\s)(\w+:)?w-/.test(className ?? "") ? "" : "w-full");
 const inputBase =
-  "rounded-lg border border-line bg-white px-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100";
+  "rounded-lg border border-line bg-white px-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand-300 focus:outline-hidden focus:ring-2 focus:ring-brand-100";
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },
@@ -96,7 +96,8 @@ export function Select({
 
 export function Field({ label, hint, children, className }: { label: string; hint?: string; children: React.ReactNode; className?: string }) {
   return (
-    <label className={cn("block space-y-1.5", className)}>
+    // Margem no topo dos itens seguintes (comportamento do space-y do Tailwind 3, que o layout usa)
+    <label className={cn("block [&>*+*]:mt-1.5", className)}>
       <span className="text-xs font-medium text-ink-soft">{label}</span>
       {children}
       {hint && <span className="block text-[11px] text-ink-faint">{hint}</span>}
@@ -127,7 +128,7 @@ export function Avatar({ name, src, size = 36 }: { name: string; src?: string | 
   }
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-sand-200 font-display font-semibold text-brand-800"
+      className="inline-flex shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-100 to-sand-200 font-display font-semibold text-brand-800"
       style={{ width: size, height: size, fontSize: size * 0.36 }}
     >
       {initials(name)}
@@ -263,7 +264,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastCtx.Provider value={push}>
       {children}
-      <div className="no-print pointer-events-none fixed bottom-20 right-4 z-[60] flex flex-col gap-2 lg:bottom-4">
+      <div className="no-print pointer-events-none fixed bottom-20 right-4 z-60 flex flex-col gap-2 lg:bottom-4">
         {items.map((t) => (
           <div
             key={t.id}

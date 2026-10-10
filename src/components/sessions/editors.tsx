@@ -125,7 +125,7 @@ export function ActivitiesEditor({ value, onChange, withDone }: { value: Session
           <div className="flex items-center gap-2">
             {withDone ? (
               <button type="button" onClick={() => set(a.id, { done: !a.done })} aria-label="Marcar como realizada"
-                className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded border", a.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-line")}>
+                className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border", a.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-line")}>
                 {a.done && <Check className="h-3 w-3" />}
               </button>
             ) : <span className="w-5 shrink-0 text-right text-xs font-medium text-ink-faint">{i + 1}.</span>}

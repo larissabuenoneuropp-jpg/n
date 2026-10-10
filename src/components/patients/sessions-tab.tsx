@@ -177,7 +177,7 @@ function SessionForm({ patient, open, onClose, initial, appointmentId, onSaved }
             <Select value={f.plan_id ?? ""} onChange={(e) => setF({ ...f, plan_id: e.target.value || null })} placeholder="Nenhum" options={plans.data.map((p) => ({ value: p.id, label: p.title }))} />
           </Field>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
           <div>
             <p className="mb-1.5 text-xs font-medium text-ink-soft">Objetivos da sessão — resultado de cada um</p>
             <ObjectivesEditor value={f.objective_results ?? []} onChange={(v) => setF({ ...f, objective_results: v })} withStatus
@@ -375,7 +375,7 @@ export function SessionsTab({ patient, autoNew, appointmentId }: { patient: Pati
                     </div>
                   )}
                 </dl>
-                <div className="rounded-xl bg-gradient-to-br from-brand-50/60 to-sage-50/60 p-4">
+                <div className="rounded-xl bg-linear-to-br from-brand-50/60 to-sage-50/60 p-4">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><Sparkles className="h-3.5 w-3.5" /> Sugestões da IA</p>
                     <Button variant="ghost" size="sm" loading={insightLoading === r.id} onClick={() => regenerate(r)}>{r.ai_insights ? "Gerar novamente" : "Gerar"}</Button>

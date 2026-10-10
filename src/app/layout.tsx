@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, Outfit } from "next/font/google";
 import "./globals.css";
 
-const body = DM_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const body = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
 // Fallback para os títulos enquanto/caso a Neulis não esteja disponível
 const displayFallback = Outfit({ subsets: ["latin"], variable: "--font-display-fallback", display: "swap" });
 

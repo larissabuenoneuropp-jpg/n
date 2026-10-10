@@ -189,7 +189,7 @@ function SettingsInner() {
           const tpl = (k: keyof typeof BILLING_TEMPLATES) => f.templates?.[k] ?? BILLING_TEMPLATES[k];
           const setTpl = (k: keyof typeof BILLING_TEMPLATES, v: string) => set("templates", { ...f.templates, [k]: v });
           return (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
               <Card>
                 <CardHeader title="Regras de cobrança automática" subtitle="As mensagens são preparadas pelas datas de vencimento e SEMPRE aguardam sua aprovação" />
                 <div className="space-y-3 p-5 text-sm">
@@ -226,12 +226,12 @@ function SettingsInner() {
             <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-[1fr_220px]">
               <div className="space-y-3">
                 <Select value={tplType} onChange={(e) => setTplType(e.target.value)} options={REPORT_TYPES.map((t) => ({ value: t.value, label: t.label }))} />
-                <Textarea className="min-h-[50vh] font-mono text-[13px]" value={f.templates?.[tplType] ?? ""} onChange={(e) => set("templates", { ...f.templates, [tplType]: e.target.value })} />
+                <Textarea className="min-h-[50vh] font-mono text-sm" value={f.templates?.[tplType] ?? ""} onChange={(e) => set("templates", { ...f.templates, [tplType]: e.target.value })} />
               </div>
               <div>
                 <p className="mb-2 text-xs font-medium text-ink-soft">Variáveis disponíveis</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {TEMPLATE_VARS.map((v) => <code key={v} className="rounded bg-canvas px-1.5 py-0.5 text-[11px] text-ink-soft">{`{{${v}}}`}</code>)}
+                  {TEMPLATE_VARS.map((v) => <code key={v} className="rounded-sm bg-canvas px-1.5 py-0.5 text-[11px] text-ink-soft">{`{{${v}}}`}</code>)}
                 </div>
               </div>
             </div>

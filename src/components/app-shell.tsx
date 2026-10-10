@@ -144,7 +144,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Topbar mobile/tablet */}
-      <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
+      <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur-sm lg:hidden">
         <Logo />
         <button onClick={() => setOpen(true)} className="rounded-md p-2 text-ink-soft hover:bg-canvas" aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
@@ -171,7 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Navegação inferior mobile */}
-      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-white/95 backdrop-blur sm:hidden">
+      <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-white/95 backdrop-blur-sm sm:hidden">
         {NAV.filter((n) => MOBILE_NAV.includes(n.href)).map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href} className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px]", active(href) ? "text-brand-600" : "text-ink-faint")}>
             <Icon className="h-5 w-5" />
