@@ -2,6 +2,7 @@
 import type { Appointment, Assessment, ChargeMessage, ClinicTask, InterventionPlan, Patient, Profile, Receipt, Report, SessionRecord, TaskPriority, Transaction } from "@/lib/types";
 import { addDays, monthKey, parseDate, toISODate } from "@/lib/utils";
 import { missingContractFields } from "@/lib/documents";
+import { isPersonalMode } from "@/lib/supabase/config";
 
 export const PRIORITY: Record<TaskPriority, { label: string; tone: "red" | "amber" | "blue" | "gray"; order: number }> = {
   urgente: { label: "Urgente", tone: "red", order: 0 },
@@ -136,7 +137,7 @@ export function detectPending(d: {
   if (withoutFee.length) out.push({ key: `mensalidades:${thisMonth}`, title: `Lançar cobranças do mês (${withoutFee.length} paciente(s))`, description: withoutFee.map((p) => p.name).join(", "), priority: "media", category: "Financeiro", href: "/financeiro" });
 
   // Uso pessoal (dados só no navegador): lembrar do backup semanal
-  if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PERSONAL_MODE === "1") {
+  if (typeof window !== "undefined" && isPersonalMode) {
     let last: string | null = null;
     try { last = localStorage.getItem("np:last-backup"); } catch { /* sem armazenamento */ }
     if (!last || Date.now() - new Date(last).getTime() > 7 * 86400000) {

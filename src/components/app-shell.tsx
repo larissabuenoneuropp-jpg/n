@@ -33,7 +33,6 @@ const IDLE_LIMIT_MS = 30 * 60 * 1000; // encerra a sessão após 30 min sem ativ
 
 async function signOut() {
   if (isSupabaseConfigured) await getSupabaseBrowser().auth.signOut();
-  if (isPersonalMode) await fetch("/api/unlock", { method: "DELETE" }).catch(() => {});
 }
 
 function useIdleLogout() {
@@ -106,14 +105,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="truncate text-sm font-medium">{profile?.professional_name || "Profissional"}</p>
           <p className="truncate text-xs text-ink-faint">{profile?.clinic_name || profile?.profession}</p>
         </div>
-        {(isSupabaseConfigured || isPersonalMode) && (
+        {isSupabaseConfigured && (
           <button
             onClick={async () => {
               await signOut();
               router.replace("/login");
             }}
             className="rounded-md p-1.5 text-ink-faint hover:bg-white hover:text-ink"
-            title={isPersonalMode ? "Bloquear (pede a senha novamente, se houver)" : "Sair"}
+            title="Sair"
             aria-label="Sair"
           >
             <LogOut className="h-4 w-4" />

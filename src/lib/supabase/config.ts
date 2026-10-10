@@ -5,16 +5,11 @@ export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 /**
- * Modo demonstração (sem login, dados no navegador) só é permitido em desenvolvimento
- * ou quando ativado explicitamente com NEXT_PUBLIC_DEMO_MODE=1.
- * Em produção sem Supabase e sem essa variável, o acesso fica bloqueado até configurar o login.
+ * Sem Supabase o NeuroPlanner abre direto, SEM LOGIN, e guarda os dados apenas no navegador.
+ * - Padrão: uso pessoal (começa vazio, para a profissional colocar os próprios dados).
+ * - NEXT_PUBLIC_DEMO_MODE=1: demonstração com pacientes fictícios.
+ * Com Supabase configurado, o acesso passa a exigir conta com e-mail confirmado.
  */
-/**
- * Modo pessoal (uso individual, sem conta): dados guardados só no navegador da profissional,
- * começando vazio (sem dados fictícios). Ative com NEXT_PUBLIC_PERSONAL_MODE=1.
- * Opcional: APP_PASSWORD (variável de servidor) pede uma senha simples para abrir o site.
- */
-export const isPersonalMode = !isSupabaseConfigured && process.env.NEXT_PUBLIC_PERSONAL_MODE === "1";
-
-export const isDemoAllowed = !isSupabaseConfigured && (isPersonalMode || process.env.NEXT_PUBLIC_DEMO_MODE === "1" || process.env.NODE_ENV !== "production");
-export const isSetupRequired = !isSupabaseConfigured && !isDemoAllowed;
+export const isPersonalMode = !isSupabaseConfigured && process.env.NEXT_PUBLIC_DEMO_MODE !== "1";
+export const isDemoAllowed = !isSupabaseConfigured;
+export const isSetupRequired = false;

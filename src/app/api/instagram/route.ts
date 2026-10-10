@@ -3,7 +3,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { MediaInsight } from "@/lib/social";
 import { isPersonalMode } from "@/lib/supabase/config";
-import { personalUnlocked } from "@/lib/personal-auth";
 
 export const runtime = "nodejs";
 
@@ -56,7 +55,7 @@ export async function GET(req: Request) {
   const token = process.env.INSTAGRAM_ACCESS_TOKEN;
   const userId = process.env.INSTAGRAM_USER_ID;
   // Sem login (modo demonstração publicado), não expor as métricas reais da conta.
-  const publicDemo = !isSupabaseConfigured && process.env.NODE_ENV === "production" && !(isPersonalMode && (await personalUnlocked(req)));
+  const publicDemo = !isSupabaseConfigured && !isPersonalMode && process.env.NODE_ENV === "production";
   if (!token || !userId || publicDemo) {
     return NextResponse.json({ configured: false, demo: true, media: DEMO });
   }

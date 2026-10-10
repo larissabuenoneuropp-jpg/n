@@ -120,8 +120,13 @@ export function parseDocumentText(text: string): ImportData {
   else if (resp?.[1]?.trim()) data.guardian_name = resp[1].trim();
 
   const hand = text.match(/domin[âa]ncia\s+manual[^\n]*/i)?.[0] ?? "";
-  if (/\(\s*x\s*\)\s*destr/i.test(hand) || /destr[oa]\s*\(\s*x\s*\)/i.test(hand)) data.handedness = "destro";
-  else if (/\(\s*x\s*\)\s*canhot/i.test(hand) || /canhot[oa]\s*\(\s*x\s*\)/i.test(hand)) data.handedness = "canhoto";
+  // Formato "( X ) Destro ( ) Canhoto" (parêntese antes da opção) ou "Destro ( X ) Canhoto ( )" (depois)
+  const prefix = /\(\s*x?\s*\)\s*(destr|canhot)/i.test(hand) && /^[^(]*\(\s*x?\s*\)\s*destr/i.test(hand.replace(/^.*?:/, ""));
+  const marked = (label: string) => prefix
+    ? new RegExp(`\\(\\s*x\\s*\\)\\s*${label}`, "i").test(hand)
+    : new RegExp(`${label}[oa]?\\s*\\(\\s*x\\s*\\)`, "i").test(hand);
+  if (marked("destr")) data.handedness = "destro";
+  else if (marked("canhot")) data.handedness = "canhoto";
 
   // Seções
   const lines = text.split("\n");
