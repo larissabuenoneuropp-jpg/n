@@ -12,6 +12,8 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import type { AuditLog, BillingRules, Profile } from "@/lib/types";
 import { BILLING_TEMPLATES, DEFAULT_BILLING_RULES } from "@/lib/billing";
 import { downloadBlob } from "@/lib/utils";
+import { encryptBackup } from "@/lib/data/vault";
+import { AccessKeyCard, RestoreBackup, VaultCard } from "@/components/settings/personal-security";
 
 type Tab = "clinica" | "modelos" | "cobrancas" | "seguranca";
 
@@ -98,10 +100,17 @@ function SettingsInner() {
   }
 
   async function exportData() {
-    const data = await store.exportAll();
-    downloadBlob(new Blob([JSON.stringify(data)], { type: "application/json" }), `neuroplanner-backup-${new Date().toISOString().slice(0, 10)}.json`);
-    try { localStorage.setItem("np:last-backup", new Date().toISOString()); } catch { /* sem armazenamento */ }
-    toast("Backup exportado. Guarde o arquivo em local seguro.");
+    try {
+      const plain = await store.exportAll();
+      // Uso pessoal: o arquivo sai criptografado (só abre com a senha do cofre)
+      const data = isPersonalMode ? await encryptBackup(plain) : plain;
+      const suffix = isPersonalMode ? "-criptografado" : "";
+      downloadBlob(new Blob([JSON.stringify(data)], { type: "application/json" }), `neuroplanner-backup-${new Date().toISOString().slice(0, 10)}${suffix}.json`);
+      try { localStorage.setItem("np:last-backup", new Date().toISOString()); } catch { /* sem armazenamento */ }
+      toast(isPersonalMode ? "Backup criptografado exportado. Ele abre com a senha atual do cofre." : "Backup exportado. Guarde o arquivo em local seguro.");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Não foi possível exportar", "error");
+    }
   }
 
   async function changePassword() {
@@ -235,28 +244,41 @@ function SettingsInner() {
               <Card>
                 <CardHeader title="Proteção de dados" icon={<ShieldCheck className="h-4 w-4" />} />
                 <ul className="space-y-2 p-5 text-sm text-ink-soft">
-                  <li>• Tráfego criptografado (HTTPS/TLS) e cabeçalhos de segurança (HSTS, anti-iframe).</li>
-                  <li>• Dados isolados por profissional com Row Level Security no banco.</li>
-                  <li>• Arquivos em bucket privado com links temporários (10 min).</li>
-                  <li>• Sessão encerrada após 30 minutos de inatividade.</li>
+                  <li>• Tráfego criptografado (HTTPS/TLS) e cabeçalhos de segurança (HSTS, CSP, anti-iframe).</li>
+                  {isPersonalMode ? (
+                    <>
+                      <li>• Dados e arquivos criptografados (AES-256) neste navegador, abertos só com a senha do cofre.</li>
+                      <li>• Cofre bloqueado automaticamente após 15 minutos sem uso.</li>
+                      <li>• Backups exportados criptografados.</li>
+                      <li>• Rotas do servidor protegidas por chave de acesso e limite de requisições.</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• Dados isolados por profissional com Row Level Security no banco.</li>
+                      <li>• Arquivos em bucket privado com links temporários (10 min).</li>
+                      <li>• Sessão encerrada após 30 minutos de inatividade.</li>
+                    </>
+                  )}
+                  <li>• Envio de arquivos limitado a documentos, imagens, áudio e vídeo comuns (sem HTML/SVG/executáveis).</li>
                   <li>• Registro de auditoria de criação, alteração e exclusão.</li>
                   <li>• A IA recebe apenas dados clínicos pseudonimizados (sem nome, contato ou escola).</li>
                 </ul>
                 {!isSupabaseConfigured && (isPersonalMode ? (
                   <p className="mx-5 mb-5 rounded-lg bg-sage-50 p-3 text-xs text-sage-700">
-                    <b>Uso pessoal:</b> os dados ficam somente neste navegador, neste computador — não vão para nenhum servidor e não aparecem para quem abrir o site em outro aparelho.
-                    Atenção: se o navegador for limpo ou o computador trocado, os dados se perdem. <b>Exporte um backup toda semana</b> e guarde em local seguro (o arquivo contém dados sensíveis).
-                    Use sempre o mesmo navegador. Proteja o computador com senha.
+                    <b>Uso pessoal:</b> os dados ficam somente neste navegador, neste computador, criptografados — não vão para nenhum servidor e não aparecem para quem abrir o site em outro aparelho.
+                    Atenção: se o navegador for limpo, o computador trocado ou a senha do cofre esquecida, os dados se perdem. <b>Exporte um backup toda semana</b> e anote a senha em lugar seguro.
+                    Proteja o computador com senha e mantenha o sistema e o navegador atualizados.
                   </p>
                 ) : <p className="mx-5 mb-5 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Modo demonstração: os dados ficam somente no navegador e as proteções de servidor não se aplicam. Não insira dados reais de pacientes.</p>)}
               </Card>
               <Card>
                 <CardHeader title="Backup e portabilidade (LGPD)" icon={<Download className="h-4 w-4" />} />
                 <div className="space-y-3 p-5 text-sm text-ink-soft">
-                  <p>Exporte todos os seus dados em JSON. Recomendado periodicamente, além do backup do provedor.</p>
+                  <p>{isPersonalMode ? "Exporte todos os seus dados e arquivos em um arquivo criptografado (abre só com a senha do cofre). Faça toda semana e guarde fora do computador (pen drive ou nuvem)." : "Exporte todos os seus dados em JSON. Recomendado periodicamente, além do backup do provedor."}</p>
                   <Button variant="secondary" onClick={exportData}><Download className="h-4 w-4" /> Exportar meus dados</Button>
                   {store.mode === "demo" && (
                     <>
+                      {isPersonalMode ? <RestoreBackup /> : (
                       <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
                         <Upload className="h-4 w-4" /> Restaurar backup
                         <input type="file" accept="application/json,.json" className="hidden" onChange={async (e) => {
@@ -272,6 +294,7 @@ function SettingsInner() {
                           }
                         }} />
                       </label>
+                      )}
                       <Button variant="danger" onClick={async () => {
                         if (!confirm(isPersonalMode ? "Apagar TODOS os seus dados deste navegador? Faça um backup antes. Esta ação não pode ser desfeita." : "Apagar os dados da demonstração e recarregar os exemplos?")) return;
                         await DemoStore.reset();
@@ -284,6 +307,8 @@ function SettingsInner() {
                   )}
                 </div>
               </Card>
+              {isPersonalMode && <VaultCard />}
+              {isPersonalMode && <AccessKeyCard />}
               {isSupabaseConfigured && (
                 <Card>
                   <CardHeader title="Alterar senha" icon={<KeyRound className="h-4 w-4" />} />

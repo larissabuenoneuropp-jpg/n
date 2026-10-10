@@ -1,0 +1,29 @@
+name: Segurança
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 9 * * 1" # toda segunda-feira
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Segredos no código
+        run: node scripts/check-secrets.mjs
+      - name: Dependências usadas pelo site (produção)
+        run: npm audit --omit=dev --audit-level=moderate
+      - name: Dependências de build (informativo)
+        run: npm audit --audit-level=critical || true

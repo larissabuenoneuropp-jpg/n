@@ -12,6 +12,7 @@ import { engagement, metricsBrief, privacyScan, socialText, summarizeDemands, ty
 import { slideBlob, renderSlide } from "@/lib/social-art";
 import type { SocialContent, SocialFormat, SocialMetrics, SocialPost, SocialStatus } from "@/lib/types";
 import { cn, downloadBlob, formatDate, today } from "@/lib/utils";
+import { apiFetch } from "@/lib/api-client";
 
 const FORMATS: Array<{ value: SocialFormat; label: string; icon: React.ReactNode }> = [
   { value: "carrossel", label: "Carrossel", icon: <Layers className="h-4 w-4" /> },
@@ -38,7 +39,7 @@ function useInstagram() {
   const load = async (refresh = false) => {
     setState((s) => ({ ...s, loading: true }));
     try {
-      const res = await fetch(`/api/instagram${refresh ? "?refresh=1" : ""}`);
+      const res = await apiFetch(`/api/instagram${refresh ? "?refresh=1" : ""}`);
       const json = await res.json();
       setState({ loading: false, configured: json.configured, demo: json.demo, media: json.media ?? [], error: json.error, warnings: json.warnings });
     } catch {

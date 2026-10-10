@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import JSZip from "jszip";
 import ExcelJS from "exceljs";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { deny, guard } from "@/lib/server/guard";
 
 export const runtime = "nodejs";
 const MAX_BYTES = 15 * 1024 * 1024;
+const MAX_TEXT = 300_000;
+const MAX_ROWS = 5_000;
+
+const json = (body: Record<string, unknown>) => NextResponse.json(body, { headers: { "Cache-Control": "no-store" } });
+const startsWith = (buf: ArrayBuffer, sig: number[]) => sig.every((b, i) => new Uint8Array(buf, 0, Math.min(sig.length, buf.byteLength))[i] === b);
+const ZIP = [0x50, 0x4b, 0x03, 0x04]; // .docx/.xlsx são pacotes zip
+const PDF = [0x25, 0x50, 0x44, 0x46]; // %PDF
 
 /** Extrai o texto de um .docx (parágrafos, quebras e tabelas com " | " entre células). */
 async function docxText(buf: ArrayBuffer) {
@@ -84,31 +90,39 @@ function csvRows(text: string) {
 }
 
 export async function POST(req: Request) {
-  if (isSupabaseConfigured) {
-    const sb = await getSupabaseServer();
-    const { data } = await sb.auth.getUser();
-    if (!data.user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
+  const g = await guard(req, { bucket: "import", limit: 40 });
+  if (!g.ok) return g.response;
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_BYTES + 64 * 1024) return deny(413, "Arquivo maior que 15 MB");
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
-  if (!(file instanceof File)) return NextResponse.json({ error: "Envie um arquivo" }, { status: 400 });
-  if (file.size > MAX_BYTES) return NextResponse.json({ error: "Arquivo maior que 15 MB" }, { status: 413 });
+  if (!(file instanceof File)) return deny(400, "Envie um arquivo");
+  if (file.size > MAX_BYTES) return deny(413, "Arquivo maior que 15 MB");
 
   const name = file.name.toLowerCase();
   const buf = await file.arrayBuffer();
+  const text = (t: string) => json({ kind: "document", text: t.slice(0, MAX_TEXT) });
+  const rows = (r: string[][]) => json({ kind: "sheet", rows: r.slice(0, MAX_ROWS).map((row) => row.slice(0, 80).map((c) => c.slice(0, 2000))) });
   try {
-    if (name.endsWith(".docx")) return NextResponse.json({ kind: "document", text: await docxText(buf) });
-    if (name.endsWith(".pdf")) {
-      const text = await pdfText(buf);
-      if (!text.trim()) return NextResponse.json({ error: "Este PDF parece ser uma imagem digitalizada (sem texto). Exporte o documento original em .docx ou PDF com texto." }, { status: 422 });
-      return NextResponse.json({ kind: "document", text });
+    if (name.endsWith(".docx")) {
+      if (!startsWith(buf, ZIP)) return deny(415, "O arquivo não é um .docx válido.");
+      return text(await docxText(buf));
     }
-    if (name.endsWith(".xlsx")) return NextResponse.json({ kind: "sheet", rows: await sheetRows(buf) });
-    if (name.endsWith(".csv")) return NextResponse.json({ kind: "sheet", rows: csvRows(new TextDecoder().decode(buf)) });
-    if (name.endsWith(".txt") || name.endsWith(".md")) return NextResponse.json({ kind: "document", text: new TextDecoder().decode(buf) });
-    if (name.endsWith(".doc")) return NextResponse.json({ error: "Formato .doc antigo não suportado: salve como .docx (no Google Docs: Arquivo → Fazer download → .docx)." }, { status: 415 });
-    return NextResponse.json({ error: "Formato não suportado. Use .docx, .pdf, .txt, .xlsx ou .csv." }, { status: 415 });
+    if (name.endsWith(".pdf")) {
+      if (!startsWith(buf, PDF)) return deny(415, "O arquivo não é um PDF válido.");
+      const t = await pdfText(buf);
+      if (!t.trim()) return deny(422, "Este PDF parece ser uma imagem digitalizada (sem texto). Exporte o documento original em .docx ou PDF com texto.");
+      return text(t);
+    }
+    if (name.endsWith(".xlsx")) {
+      if (!startsWith(buf, ZIP)) return deny(415, "O arquivo não é um .xlsx válido.");
+      return rows(await sheetRows(buf));
+    }
+    if (name.endsWith(".csv")) return rows(csvRows(new TextDecoder().decode(buf)));
+    if (name.endsWith(".txt") || name.endsWith(".md")) return text(new TextDecoder().decode(buf));
+    if (name.endsWith(".doc")) return deny(415, "Formato .doc antigo não suportado: salve como .docx (no Google Docs: Arquivo → Fazer download → .docx).");
+    return deny(415, "Formato não suportado. Use .docx, .pdf, .txt, .xlsx ou .csv.");
   } catch (e) {
-    return NextResponse.json({ error: `Não foi possível ler o arquivo: ${(e as Error).message}` }, { status: 422 });
+    console.error("import", (e as Error).message);
+    return deny(422, "Não foi possível ler o arquivo. Confira se ele não está corrompido ou protegido por senha.");
   }
 }

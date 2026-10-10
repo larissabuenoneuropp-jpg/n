@@ -12,6 +12,7 @@ import {
 } from "@/lib/importer";
 import type { Patient } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
+import { apiFetch } from "@/lib/api-client";
 
 interface Candidate {
   key: string;
@@ -102,7 +103,7 @@ export default function ImportPatientsPage() {
       try {
         const fd = new FormData();
         fd.append("file", file);
-        const res = await fetch("/api/import", { method: "POST", body: fd });
+        const res = await apiFetch("/api/import", { method: "POST", body: fd });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Falha na leitura");
         if (json.kind === "sheet") {

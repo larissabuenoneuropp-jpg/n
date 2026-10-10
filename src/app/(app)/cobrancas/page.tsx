@@ -7,6 +7,7 @@ import { useCollection, useData } from "@/lib/data/provider";
 import { DEFAULT_BILLING_RULES, generateChargeQueue, STAGE_LABEL, whatsappLink } from "@/lib/billing";
 import type { ChargeMessage } from "@/lib/types";
 import { cn, formatDate, money } from "@/lib/utils";
+import { apiFetch } from "@/lib/api-client";
 
 const STATUS_TONE: Record<ChargeMessage["status"], { label: string; tone: "amber" | "green" | "gray" | "red" }> = {
   pendente: { label: "Aguardando aprovação", tone: "amber" },
@@ -33,7 +34,7 @@ function MessageCard({ m, auto, selected, onSelect, onUpdate, patientName }: {
     const now = new Date().toISOString();
     try {
       if (isAuto) {
-        const res = await fetch("/api/messages/send", {
+        const res = await apiFetch("/api/messages/send", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(m.channel === "email"
             ? { channel: "email", to: draft.recipient, subject: draft.subject, text: draft.body }
@@ -108,7 +109,7 @@ export default function ChargesPage() {
   const rules = { ...DEFAULT_BILLING_RULES, ...(profile?.billing_rules ?? {}) };
 
   useEffect(() => {
-    fetch("/api/messages/send").then((r) => r.json()).then((j) => setAuto({ email: Boolean(j.email), whatsapp: Boolean(j.whatsapp) })).catch(() => {});
+    apiFetch("/api/messages/send").then((r) => r.json()).then((j) => setAuto({ email: Boolean(j.email), whatsapp: Boolean(j.whatsapp) })).catch(() => {});
   }, []);
 
   async function check() {
@@ -133,7 +134,7 @@ export default function ChargesPage() {
     for (const m of items) {
       const isAuto = m.channel === "email" ? auto.email : auto.whatsapp;
       if (!isAuto || !m.recipient) continue;
-      const res = await fetch("/api/messages/send", {
+      const res = await apiFetch("/api/messages/send", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(m.channel === "email" ? { channel: "email", to: m.recipient, subject: m.subject, text: m.body }
           : { channel: "whatsapp", to: m.recipient, text: m.body, params: [m.recipient_name?.split(" ")[0] || "família", pmap.get(m.patient_id ?? "")?.split(" ")[0] ?? "", money(m.amount), formatDate(m.due_date)] }),

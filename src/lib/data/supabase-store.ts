@@ -2,6 +2,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuditLog, Profile, TableMap, TableName } from "@/lib/types";
 import type { DataStore, ListOptions } from "./store";
+import { safeFileName, validateUpload } from "@/lib/uploads";
+
+/** Campos controlados pelo banco: nunca aceitos do navegador (proteção contra mass assignment). */
+function clean(values: Record<string, unknown>) {
+  const { id: _i, owner_id: _o, created_at: _c, updated_at: _u, ...rest } = values;
+  return rest;
+}
 
 const TABLES: TableName[] = [
   "patients", "assessments", "intervention_plans", "appointments", "session_records",
@@ -35,20 +42,19 @@ export class SupabaseStore implements DataStore {
   }
 
   async insert<K extends TableName>(table: K, values: Partial<TableMap[K]>) {
-    const { data, error } = await this.sb.from(table).insert(values as Record<string, unknown>).select().single();
+    const { data, error } = await this.sb.from(table).insert(clean(values as Record<string, unknown>)).select().single();
     if (error) throw error;
     return data as TableMap[K];
   }
 
   async insertMany<K extends TableName>(table: K, values: Partial<TableMap[K]>[]) {
     if (!values.length) return;
-    const { error } = await this.sb.from(table).insert(values as Record<string, unknown>[]);
+    const { error } = await this.sb.from(table).insert((values as Record<string, unknown>[]).map(clean));
     if (error) throw error;
   }
 
   async update<K extends TableName>(table: K, id: string, patch: Partial<TableMap[K]>) {
-    const { id: _ignored, owner_id: _o, created_at: _c, updated_at: _u, ...rest } = patch as Record<string, unknown>;
-    const { data, error } = await this.sb.from(table).update(rest).eq("id", id).select().single();
+    const { data, error } = await this.sb.from(table).update(clean(patch as Record<string, unknown>)).eq("id", id).select().single();
     if (error) throw error;
     return data as TableMap[K];
   }
@@ -67,17 +73,17 @@ export class SupabaseStore implements DataStore {
 
   async saveProfile(patch: Partial<Profile>) {
     const id = await this.uid();
-    const { id: _i, ...rest } = patch;
+    const { id: _i, created_at: _c, updated_at: _u, ...rest } = patch as Record<string, unknown>;
     const { data, error } = await this.sb.from("profiles").update(rest).eq("id", id).select().single();
     if (error) throw error;
     return data as Profile;
   }
 
   async upload(file: File, folder: string) {
+    const { type } = validateUpload(file);
     const id = await this.uid();
-    const safe = file.name.normalize("NFD").replace(/[^\w.-]+/g, "_");
-    const path = `${id}/${folder}/${Date.now()}_${safe}`;
-    const { error } = await this.sb.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: file.type });
+    const path = `${id}/${folder.split("/").filter(Boolean).map(safeFileName).join("/")}/${Date.now()}_${safeFileName(file.name)}`;
+    const { error } = await this.sb.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: type });
     if (error) throw error;
     return path;
   }

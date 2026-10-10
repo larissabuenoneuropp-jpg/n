@@ -23,7 +23,7 @@ No modo demonstração: dados fictícios salvos apenas no navegador (localStorag
 ### Produção (Supabase + OpenAI)
 
 1. Crie um projeto no [Supabase](https://supabase.com).
-2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações) `0005_social_posts.sql` (conteúdos de Instagram) e `0006_areas_ran_import.sql` (áreas de intervenção, RAN, importação e cobranças).
+2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações) `0005_social_posts.sql` (conteúdos de Instagram) `0006_areas_ran_import.sql` (áreas de intervenção, RAN, importação e cobranças) e `0007_security_hardening.sql` (reforço contra mass assignment, sem acesso anônimo, limites do bucket) — ou tudo de uma vez com `supabase/instalacao-completa.sql`.
 3. Em *Authentication › Providers › Email*, mantenha **"Confirm email" ativado**: o NeuroPlanner só libera o acesso depois que o e-mail é confirmado pelo link enviado.
 4. Em *Authentication › URL Configuration*, adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento.
 5. Preencha `.env.local`:
@@ -85,13 +85,32 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 
 ## Segurança
 
-- Autenticação Supabase (e-mail/senha, confirmação por e-mail, recuperação de senha); middleware valida a sessão em toda rota.
-- **Row Level Security** em todas as tabelas: cada profissional só acessa os próprios dados.
-- Storage em bucket **privado**, pastas por usuária, links assinados de 10 min.
-- **Logs de auditoria** via trigger (criar/alterar/excluir), visíveis em Configurações.
-- Sessão encerrada após 30 min de inatividade; cabeçalhos HSTS, X-Frame-Options, nosniff etc.
-- Criptografia em trânsito (TLS) e em repouso (provida pela infraestrutura do Supabase).
-- Exportação completa dos dados em JSON (portabilidade/backup manual).
+Resumo do que está implementado (e do que **não** está), item por item:
+
+| Item | Como está |
+|---|---|
+| Chaves de API escondidas | OpenAI, Instagram, Resend e WhatsApp ficam **só no servidor** (variáveis sem `NEXT_PUBLIC_`). Nenhuma chave no código. |
+| Segredos fora do Git | `.env*` no `.gitignore`; `node scripts/check-secrets.mjs` (também no GitHub Actions) procura chaves nos arquivos. O histórico foi verificado: sem chaves nem dados reais. Ative também o *Secret scanning* do GitHub (Settings › Code security). |
+| Chave pública do banco | A `anon key` do Supabase é pública por natureza; a proteção vem do RLS. A `service_role` **nunca** é usada no app. |
+| RLS | Ativado em todas as tabelas (`owner_id = auth.uid()`), bucket privado com pastas por usuária; visitantes sem login (`anon`) sem nenhuma permissão (migração 0007). |
+| Criptografia de dados | Uso pessoal: **cofre local** AES-256-GCM (dados + arquivos + backups), chave derivada da senha com PBKDF2-SHA256 (600 mil iterações). Supabase: TLS + criptografia em repouso do provedor. |
+| Autenticação no servidor | Supabase: middleware e rotas validam a sessão com `getUser()` e exigem e-mail confirmado. Uso pessoal: rotas exigem `APP_ACCESS_KEY` (comparação em tempo constante). |
+| Restringir acessos | IA e Instagram reais **bloqueados** no uso pessoal publicado enquanto `APP_ACCESS_KEY` não estiver configurada. |
+| Mass assignment | `id`, `owner_id`, `created_at` e `updated_at` são descartados no app **e** forçados por trigger no banco; registros só apontam para pacientes da mesma conta (migração 0007). Rotas copiam só os campos esperados. |
+| Cookies | Sessão do Supabase com `Secure` (produção), `SameSite=Lax`, `path=/`. *Não* são `HttpOnly` porque o cliente do Supabase no navegador precisa lê-los — a CSP reduz o risco. |
+| Hash de senhas | Contas: o Supabase Auth guarda as senhas com hash (bcrypt, segundo a documentação do Supabase — confira a versão atual); o app nunca armazena senhas. Cofre: a senha não é guardada em lugar nenhum; só a chave de dados embrulhada pela chave derivada dela. |
+| Rate limit | Todas as rotas `/api` (por usuária/chave e por IP); desbloqueio do cofre com espera crescente após erro. Limite em memória por instância — não substitui um WAF. |
+| Proteção contra robôs | Rotas só aceitam chamadas do próprio site (`Origin`/`Sec-Fetch-Site`), exigem sessão ou chave, `robots.txt` e `X-Robots-Tag: noindex`. **Sem CAPTCHA** — no Supabase dá para ativar em Authentication › Bot and Abuse Protection (confira a documentação atual). |
+| Queries parametrizadas | Todo acesso ao banco é pelo supabase-js (PostgREST, parâmetros escapados); nenhum SQL montado com texto do usuário. Identificadores nas migrações usam `format('%I')`. |
+| Validação de entradas | Rotas validam tipo, tamanho e formato (tarefa de IA por lista, e-mail/telefone, tamanho de textos, assinatura binária de .docx/.xlsx/.pdf). |
+| Vazamento de conteúdo | Erros genéricos para o usuário (detalhes só no log do servidor, truncados), `Cache-Control: no-store` nas APIs, sem source maps no navegador, sem `X-Powered-By`, `Referrer-Policy: no-referrer`; a IA recebe dados pseudonimizados. |
+| Uploads | Lista de formatos permitidos (documentos, imagens, áudio, vídeo MP4), até 25 MB, conferência de extensão × tipo; **HTML, SVG, scripts e executáveis recusados**. No Supabase, o bucket também limita tamanho e tipos (migração 0007). |
+| Respostas enxutas | APIs devolvem só os campos necessários; textos externos truncados. |
+| Cabeçalhos de segurança | CSP (produção), HSTS, X-Frame-Options, nosniff, COOP, CORP, Permissions-Policy, Referrer-Policy. |
+| HTTPS | Redirecionamento para HTTPS no middleware + HSTS (o Netlify já serve com HTTPS). |
+| Scan de dependências | `npm audit` no GitHub Actions (toda segunda e a cada push) + Dependabot semanal. Dependências usadas pelo site: **0 vulnerabilidades** conhecidas (out/2026). As do Tailwind 3 (só na compilação, com arquivos do próprio projeto) dependem de migrar para o Tailwind 4. |
+
+Também: logs de auditoria (criar/alterar/excluir) e exportação completa dos dados.
 
 ## Limitações conhecidas (seja transparente com as usuárias)
 
@@ -100,19 +119,35 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 - **Assinatura digital:** é uma imagem da assinatura nos PDFs; não é assinatura certificada ICP-Brasil.
 - **Testes e protocolos:** a classificação de quem pode aplicar é uma referência. WISC, BPA, SON-R, Bender e Figuras de Rey estão como privativos de psicólogos; vários itens estão como "a confirmar" por falta de certeza. Faixas etárias e subtestes não foram preenchidos: confira no manual e personalize. A lista oficial é a do SATEPSI/CFP.
 - **Roteiros por IA** são genéricos de organização da sessão: por regra, a IA não reproduz itens, instruções literais nem tabelas normativas (material protegido por direitos autorais).
-- **Criptografia de campo** (além da criptografia em repouso do provedor) não foi implementada; avaliar `pgsodium`/Vault para campos específicos.
+- **Criptografia de campo no Supabase** (além da criptografia em repouso do provedor) não foi implementada; avaliar `pgsodium`/Vault para campos específicos. No uso pessoal, tudo é criptografado no navegador (cofre local).
 - Não há testes automatizados no repositório ainda (os fluxos foram verificados manualmente no navegador).
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.
 
 ## Uso pessoal, sem login (padrão sem Supabase)
 
-Sem as variáveis do Supabase, o NeuroPlanner **abre direto, sem login nem senha**, e começa vazio para a profissional colocar os próprios dados. Para a IA, basta `OPENAI_API_KEY` no Netlify.
+Sem as variáveis do Supabase, o NeuroPlanner **não pede conta nem e-mail**: no primeiro acesso você cria a **senha do cofre**, que criptografa os dados neste computador. O sistema começa vazio para você colocar os próprios dados.
 
-Como funciona: **os dados ficam somente no navegador do seu computador** (localStorage + IndexedDB) — não vão para servidor nenhum e quem abrir o link em outro aparelho vê um sistema vazio. Cuidados:
-- Use sempre o mesmo navegador e computador; limpar os dados do navegador apaga tudo.
-- **Faça o backup semanal** em Configurações › Segurança › Exportar meus dados (inclui os arquivos). O mesmo arquivo restaura tudo em outro computador (Restaurar backup). O backup contém dados sensíveis: guarde em local seguro.
-- Os dados não sincronizam entre computador e celular (para isso, configure o Supabase — aí o acesso passa a exigir conta).
-- Sem login, qualquer pessoa com o link pode usar a IA com a sua chave da OpenAI: não divulgue o endereço e, se possível, defina um limite de gastos na sua conta OpenAI.
+Como funciona:
+- **Os dados ficam só no navegador do seu computador**, criptografados (AES-256). Não vão para servidor nenhum; quem abrir o link em outro aparelho vê apenas a tela de criar senha, sem nenhum dado.
+- **Bloqueio:** botão de cadeado (barra lateral), bloqueio automático após 15 min sem uso, e ao recarregar a página (F5) ou fechar a aba — a chave só existe na memória enquanto o cofre está aberto.
+- **Esqueceu a senha? Não há recuperação.** Anote a senha em lugar seguro. A única saída é apagar o cofre e restaurar um backup.
+- **Backup semanal** em Configurações › Segurança › Exportar meus dados: o arquivo sai **criptografado** (inclui os arquivos) e abre com a senha do cofre que valia na data do backup. Guarde uma cópia fora do computador.
+- Dados de versões anteriores (sem criptografia) são migrados para o cofre e apagados da forma aberta no primeiro acesso. Backups antigos (sem criptografia) ainda podem ser restaurados — depois apague esses arquivos.
+- Use sempre o mesmo navegador e computador; limpar os dados do navegador apaga tudo. Não sincroniza com o celular.
+
+### Proteger a IA e o Instagram (obrigatório para usar a IA real)
+
+Como não há login, o servidor precisa de outra forma de saber que é você:
+1. Em Configurações › Segurança › **Chave de acesso do servidor**, clique em **Gerar uma chave forte** e copie.
+2. No Netlify: Site configuration › Environment variables (o caminho pode mudar no painel) › `APP_ACCESS_KEY` = essa chave (mínimo 24 caracteres). Faça um novo deploy.
+3. No NeuroPlanner, cole a mesma chave e clique em **Salvar chave** (fica guardada dentro do cofre).
+
+Sem `APP_ACCESS_KEY`, a IA real e as métricas do Instagram ficam bloqueadas no site publicado (a IA responde com exemplos). Mesmo assim, defina um limite de gastos na sua conta OpenAI.
+
+### Limites do cofre (seja realista)
+- Protege contra quem pega o computador desligado/bloqueado, contra outra pessoa abrindo o site e contra cópia dos arquivos do navegador. **Não protege** contra vírus/keylogger no computador nem contra alguém usando o computador com o cofre aberto — bloqueie ao se afastar.
+- A força depende da senha: use pelo menos 10 caracteres (uma frase com números é ótima).
+- LGPD exige também processos (consentimento, guarda, descarte, contrato com a OpenAI se usar a IA) — o software ajuda, não garante conformidade sozinho.
 
 ## Publicar no Netlify
 

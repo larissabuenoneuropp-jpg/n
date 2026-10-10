@@ -23,8 +23,9 @@ async function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBReq
 }
 
 export const isIdbAvailable = () => typeof indexedDB !== "undefined";
-export const putFile = (key: string, blob: Blob) => tx("readwrite", (s) => s.put(blob, key));
-export const getFile = (key: string) => tx<Blob | undefined>("readonly", (s) => s.get(key) as IDBRequest<Blob | undefined>);
+/** Guarda um Blob (modo demonstração) ou um arquivo criptografado (cofre do modo pessoal). */
+export const putFile = (key: string, value: Blob | object) => tx("readwrite", (s) => s.put(value, key));
+export const getFile = (key: string) => tx<unknown>("readonly", (s) => s.get(key) as IDBRequest<unknown>);
 export const deleteFile = (key: string) => tx("readwrite", (s) => s.delete(key));
 export const allFileKeys = () => tx<IDBValidKey[]>("readonly", (s) => s.getAllKeys());
 export const clearFiles = () => tx("readwrite", (s) => s.clear());
@@ -56,6 +57,14 @@ export const blobToDataUrl = (b: Blob) =>
     r.readAsDataURL(b);
   });
 
+/** Converte data URL em Blob sem fetch (compatível com a Content-Security-Policy do site). */
 export async function dataUrlToBlob(url: string) {
-  return (await fetch(url)).blob();
+  const m = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(url);
+  if (!m) throw new Error("Arquivo do backup inválido.");
+  const type = m[1] || "application/octet-stream";
+  if (!m[2]) return new Blob([decodeURIComponent(m[3])], { type });
+  const bin = atob(m[3]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
 }

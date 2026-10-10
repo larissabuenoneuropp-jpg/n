@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "security:check": "node scripts/check-secrets.mjs && npm audit --omit=dev"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -29,5 +30,13 @@
     "postcss": "^8.5.29",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.28"
+    },
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

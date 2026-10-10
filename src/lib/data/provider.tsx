@@ -20,6 +20,11 @@ interface Ctx {
   bump: (table: TableName) => void;
 }
 
+const ALL_TABLES: TableName[] = [
+  "patients", "assessments", "intervention_plans", "appointments", "session_records", "activities", "documents",
+  "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts", "charge_messages",
+];
+
 const DataContext = createContext<Ctx | null>(null);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
@@ -62,6 +67,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [store, refreshProfile]);
 
   const bump = useCallback((t: TableName) => setVersion((v) => ({ ...v, [t]: (v[t] ?? 0) + 1 })), []);
+
+  // Modo pessoal com mais de uma aba: outra aba gravou no cofre → recarrega tudo nesta
+  useEffect(() => {
+    const onChange = () => {
+      setVersion((v) => Object.fromEntries([...ALL_TABLES, ...Object.keys(v)].map((t) => [t, (v[t] ?? 0) + 1])));
+      refreshProfile();
+    };
+    window.addEventListener("np:vault-changed", onChange);
+    return () => window.removeEventListener("np:vault-changed", onChange);
+  }, [refreshProfile]);
 
   // Cobranças: prepara as mensagens do dia (ficam aguardando aprovação; nada é enviado aqui)
   const [billingChecked, setBillingChecked] = useState(false);

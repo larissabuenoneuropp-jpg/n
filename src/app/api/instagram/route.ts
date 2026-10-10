@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { isPersonalMode, isSupabaseConfigured } from "@/lib/supabase/config";
 import type { MediaInsight } from "@/lib/social";
-import { isPersonalMode } from "@/lib/supabase/config";
+import { guard, personalServerLocked, trimMsg } from "@/lib/server/guard";
 
 export const runtime = "nodejs";
 
@@ -46,18 +45,15 @@ async function graph<T>(url: string): Promise<T> {
 }
 
 export async function GET(req: Request) {
-  if (isSupabaseConfigured) {
-    const sb = await getSupabaseServer();
-    const { data } = await sb.auth.getUser();
-    if (!data.user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
+  const g = await guard(req, { bucket: "instagram", limit: 20 });
+  if (!g.ok) return g.response;
 
   const token = process.env.INSTAGRAM_ACCESS_TOKEN;
   const userId = process.env.INSTAGRAM_USER_ID;
   // Sem login (modo demonstração publicado), não expor as métricas reais da conta.
   const publicDemo = !isSupabaseConfigured && !isPersonalMode && process.env.NODE_ENV === "production";
-  if (!token || !userId || publicDemo) {
-    return NextResponse.json({ configured: false, demo: true, media: DEMO });
+  if (!token || !userId || publicDemo || personalServerLocked()) {
+    return NextResponse.json({ configured: false, demo: true, media: DEMO, locked: Boolean(token && personalServerLocked()) || undefined });
   }
 
   const refresh = new URL(req.url).searchParams.get("refresh") === "1";
@@ -91,12 +87,12 @@ export async function GET(req: Request) {
             );
             read(ins.data ?? []);
           } catch (e) {
-            warnings.add(`Métrica "${metric}" indisponível para algumas publicações: ${(e as Error).message}`);
+            warnings.add(`Métrica "${metric}" indisponível para algumas publicações: ${trimMsg((e as Error).message, 120)}`);
           }
         }
       }
       media.push({
-        id: m.id, caption: m.caption ?? "", format: formatOf(m), timestamp: m.timestamp, permalink: m.permalink,
+        id: m.id, caption: (m.caption ?? "").slice(0, 2200), format: formatOf(m), timestamp: m.timestamp, permalink: m.permalink,
         metrics: {
           likes: m.like_count, comments: m.comments_count, reach: values.reach, views: values.views ?? values.plays,
           saves: values.saved, shares: values.shares,
@@ -107,6 +103,6 @@ export async function GET(req: Request) {
     cache = { at: Date.now(), data };
     return NextResponse.json(data);
   } catch (e) {
-    return NextResponse.json({ configured: true, demo: false, media: [], error: `Não foi possível ler o Instagram: ${(e as Error).message}` }, { status: 502 });
+    return NextResponse.json({ configured: true, demo: false, media: [], error: `Não foi possível ler o Instagram: ${trimMsg((e as Error).message)}` }, { status: 502 });
   }
 }

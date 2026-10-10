@@ -4,7 +4,12 @@ import { uid } from "@/lib/utils";
 import type { DataStore, ListOptions } from "./store";
 import { buildSeed } from "./seed";
 import { isPersonalMode } from "@/lib/supabase/config";
+import { validateUpload } from "@/lib/uploads";
 import { allFileKeys, blobToDataUrl, clearFiles, dataUrlToBlob, deleteFile, getFile, isIdbAvailable, putFile, requestPersistence } from "./local-files";
+import { destroyVault, flushVault, isSealedFile, openFile, sealFile, vaultClearCache, vaultGet, vaultSet } from "./vault";
+
+/** Modo pessoal guarda tudo criptografado no cofre; o modo demonstração (dados fictícios) usa o localStorage. */
+const VAULT = isPersonalMode;
 
 /** Modo pessoal: começa vazio (sem pacientes fictícios), mantendo bibliotecas, modelos e rotina. */
 function initialData() {
@@ -23,15 +28,19 @@ const TABLES: TableName[] = [
   "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts", "charge_messages",
 ];
 
+function getRaw(key: string) {
+  return VAULT ? vaultGet(key) : localStorage.getItem(PREFIX + key);
+}
 function read<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(PREFIX + key);
+    const raw = getRaw(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
 }
 function write(key: string, value: unknown) {
+  if (VAULT) return vaultSet(key, JSON.stringify(value));
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {
@@ -92,7 +101,7 @@ export class DemoStore implements DataStore {
     }
     // v7: fila de cobranças
     if (typeof window !== "undefined" && !read("seeded_v7", false)) {
-      if (!localStorage.getItem(PREFIX + "charge_messages")) write("charge_messages", []);
+      if (!getRaw("charge_messages")) write("charge_messages", []);
       write("seeded_v7", true);
     }
   }
@@ -169,10 +178,10 @@ export class DemoStore implements DataStore {
 
   async upload(file: File) {
     // Arquivos vão para o IndexedDB (bem mais espaço); sem IndexedDB, data URL no localStorage (limite pequeno)
+    validateUpload(file, isIdbAvailable() ? 25 : 1.5);
     if (isIdbAvailable()) {
-      if (file.size > 25 * 1024 * 1024) throw new Error("Limite de 25 MB por arquivo neste modo.");
       const key = `idb:${uid()}`;
-      await putFile(key, file);
+      await putFile(key, VAULT ? await sealFile(file) : file);
       return key;
     }
     if (file.size > 1.5 * 1024 * 1024) throw new Error("Limite de 1,5 MB por arquivo neste navegador.");
@@ -181,11 +190,18 @@ export class DemoStore implements DataStore {
 
   async fileUrl(path: string) {
     if (path.startsWith("idb:")) {
-      const blob = await getFile(path);
+      const blob = await this.fileBlob(path);
       if (!blob) throw new Error("Arquivo não encontrado neste navegador.");
       return URL.createObjectURL(blob);
     }
     return path; // data URL
+  }
+
+  /** Lê o arquivo do IndexedDB, descriptografando quando vier do cofre. */
+  private async fileBlob(key: string): Promise<Blob | null> {
+    const v = await getFile(key);
+    if (isSealedFile(v)) return openFile(v);
+    return v instanceof Blob ? v : null;
   }
 
   async removeFile(path: string) {
@@ -203,7 +219,7 @@ export class DemoStore implements DataStore {
     if (isIdbAvailable()) {
       const files: Record<string, string> = {};
       for (const key of await allFileKeys()) {
-        const blob = await getFile(String(key));
+        const blob = await this.fileBlob(String(key));
         if (blob) files[String(key)] = await blobToDataUrl(blob);
       }
       out._files = files;
@@ -214,17 +230,27 @@ export class DemoStore implements DataStore {
   /** Restaura um backup gerado por exportAll (substitui os dados deste navegador). */
   static async importAll(data: Record<string, unknown>) {
     if (!data || typeof data !== "object" || !("profile" in data)) throw new Error("Arquivo de backup inválido.");
+    if (VAULT) vaultClearCache();
     for (const t of TABLES) write(t, Array.isArray(data[t]) ? data[t] : []);
     write("profile", data.profile);
     ["seeded", "seeded_v2", "seeded_v3", "seeded_v4", "seeded_v5", "seeded_v6", "seeded_v7"].forEach((k) => write(k, true));
     const files = (data._files ?? {}) as Record<string, string>;
     if (isIdbAvailable()) {
       await clearFiles();
-      for (const [key, url] of Object.entries(files)) await putFile(key, await dataUrlToBlob(url));
+      for (const [key, url] of Object.entries(files)) {
+        const blob = await dataUrlToBlob(url);
+        await putFile(key, VAULT ? await sealFile(blob) : blob);
+      }
     }
+    if (VAULT) await flushVault();
   }
 
   static async reset() {
+    if (VAULT) {
+      await destroyVault();
+      if (isIdbAvailable()) await clearFiles().catch(() => {});
+      return;
+    }
     Object.keys(localStorage)
       .filter((k) => k.startsWith(PREFIX))
       .forEach((k) => localStorage.removeItem(k));

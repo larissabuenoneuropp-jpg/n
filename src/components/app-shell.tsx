@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  BellRing, BookOpen, CalendarDays, ClipboardCheck, ListChecks, Megaphone, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
+  BellRing, BookOpen, CalendarDays, ClipboardCheck, ListChecks, Megaphone, FileText, FolderOpen, LayoutDashboard, Lock, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Avatar } from "./ui";
@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="mt-auto space-y-3 pt-4">
       {store.mode === "demo" && (isPersonalMode ? (
         <div className="rounded-lg border border-sage-200 bg-sage-50 p-3 text-[11px] leading-relaxed text-sage-700">
-          <b>Uso pessoal.</b> Seus dados ficam só neste navegador e computador. Faça backup em <Link href="/configuracoes?tab=seguranca" className="underline">Configurações</Link>.
+          <b>Uso pessoal.</b> Seus dados ficam criptografados só neste navegador e computador. Faça backup em <Link href="/configuracoes?tab=seguranca" className="underline">Configurações</Link>.
         </div>
       ) : (
         <div className="rounded-lg border border-sage-200 bg-sage-50 p-3 text-[11px] leading-relaxed text-sage-600">
@@ -105,6 +105,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="truncate text-sm font-medium">{profile?.professional_name || "Profissional"}</p>
           <p className="truncate text-xs text-ink-faint">{profile?.clinic_name || profile?.profession}</p>
         </div>
+        {isPersonalMode && (
+          <button
+            onClick={() => window.dispatchEvent(new Event("np:lock"))}
+            className="rounded-md p-1.5 text-ink-faint hover:bg-white hover:text-ink"
+            title="Bloquear agora"
+            aria-label="Bloquear agora"
+          >
+            <Lock className="h-4 w-4" />
+          </button>
+        )}
         {isSupabaseConfigured && (
           <button
             onClick={async () => {

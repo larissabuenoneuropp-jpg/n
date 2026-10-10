@@ -5,6 +5,14 @@ import { isSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/sup
 const PUBLIC_PATHS = ["/login", "/auth"];
 
 export async function middleware(request: NextRequest) {
+  // Força HTTPS em produção (o Netlify informa o protocolo original em x-forwarded-proto)
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(request.nextUrl.hostname);
+  if (process.env.NODE_ENV === "production" && !local && request.headers.get("x-forwarded-proto") === "http") {
+    const url = request.nextUrl.clone();
+    url.protocol = "https:";
+    return NextResponse.redirect(url, 308);
+  }
+
   // Sem Supabase: sem login — o site abre direto (dados ficam no navegador da profissional).
   if (!isSupabaseConfigured) {
     if (request.nextUrl.pathname.startsWith("/login")) return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -19,7 +27,11 @@ export async function middleware(request: NextRequest) {
       setAll: (toSet) => {
         toSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        // Cookies de sessão: só por HTTPS, sem envio a outros sites. (Não podem ser httpOnly porque o
+        // cliente do Supabase no navegador precisa lê-los; a CSP reduz o risco de leitura por scripts de terceiros.)
+        toSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, { ...options, path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" }),
+        );
       },
     },
   });
@@ -60,5 +72,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

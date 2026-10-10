@@ -2,6 +2,7 @@
 import type { Patient } from "@/lib/types";
 import { ageFrom } from "@/lib/utils";
 import type { AiTask } from "./prompts";
+import { apiFetch } from "@/lib/api-client";
 
 export interface AiResult<T> {
   demo: boolean;
@@ -9,7 +10,7 @@ export interface AiResult<T> {
 }
 
 export async function askAI<T = Record<string, unknown>>(task: AiTask, input: Record<string, unknown>): Promise<AiResult<T>> {
-  const res = await fetch("/api/ai", {
+  const res = await apiFetch("/api/ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ task, input }),
