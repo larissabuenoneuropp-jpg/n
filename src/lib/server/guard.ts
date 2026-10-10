@@ -120,6 +120,13 @@ export const ACCESS_HEADER = "x-access-key";
 const accessKey = () => (process.env.APP_ACCESS_KEY ?? "").trim();
 
 /** Uso pessoal publicado: as chaves de serviços pagos/privados (OpenAI, Instagram) só são usadas com APP_ACCESS_KEY. */
+/** Explica por que o servidor está bloqueado (sem revelar a chave). */
+export function serverLockReason() {
+  const k = accessKey();
+  if (!k) return "A variável APP_ACCESS_KEY ainda não chegou ao servidor. No Netlify, depois de criar ou alterar a variável, é preciso publicar de novo: Deploys → Trigger deploy → Deploy site.";
+  return `A APP_ACCESS_KEY cadastrada no Netlify tem ${k.length} caracteres; o mínimo é 24. Gere uma chave em Configurações → Segurança → "Gerar uma chave forte", troque o valor no Netlify e publique de novo.`;
+}
+
 export function personalServerLocked() {
   return isPersonalMode && process.env.NODE_ENV === "production" && accessKey().length < 24;
 }

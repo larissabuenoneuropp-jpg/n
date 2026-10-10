@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { SYSTEM_PROMPT, TASK_INSTRUCTIONS, type AiTask } from "@/lib/ai/prompts";
 import { mockResponse } from "@/lib/ai/mock";
 import { isPersonalMode, isSupabaseConfigured } from "@/lib/supabase/config";
-import { deny, guard, personalServerLocked, tooLarge, withConcurrency } from "@/lib/server/guard";
+import { deny, guard, personalServerLocked, serverLockReason, tooLarge, withConcurrency } from "@/lib/server/guard";
 
 export const runtime = "nodejs";
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   // Demonstração pública (dados fictícios): não usa a chave real. Uso pessoal: IA liberada.
   const publicDemo = !isSupabaseConfigured && !isPersonalMode && process.env.NODE_ENV === "production" && process.env.ALLOW_PUBLIC_AI !== "1";
   if (apiKey && personalServerLocked()) {
-    return deny(403, "IA bloqueada por segurança: cadastre a variável APP_ACCESS_KEY no Netlify (veja o README) e informe a mesma chave em Configurações → Segurança.", { code: "server_locked" });
+    return deny(403, `IA bloqueada por segurança. ${serverLockReason()}`, { code: "server_locked" });
   }
   if (!apiKey || publicDemo) {
     return NextResponse.json({ demo: true, result: mockResponse(task, body.input ?? {}) });
