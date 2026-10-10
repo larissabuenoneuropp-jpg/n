@@ -9,7 +9,7 @@ import { Logo } from "./logo";
 import { Avatar } from "./ui";
 import { cn } from "@/lib/utils";
 import { useCollection, useData } from "@/lib/data/provider";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isPersonalMode, isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 export const NAV = [
@@ -33,6 +33,7 @@ const IDLE_LIMIT_MS = 30 * 60 * 1000; // encerra a sessão após 30 min sem ativ
 
 async function signOut() {
   if (isSupabaseConfigured) await getSupabaseBrowser().auth.signOut();
+  if (isPersonalMode) await fetch("/api/unlock", { method: "DELETE" }).catch(() => {});
 }
 
 function useIdleLogout() {
@@ -90,25 +91,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const footer = (
     <div className="mt-auto space-y-3 pt-4">
-      {store.mode === "demo" && (
+      {store.mode === "demo" && (isPersonalMode ? (
+        <div className="rounded-lg border border-sage-200 bg-sage-50 p-3 text-[11px] leading-relaxed text-sage-700">
+          <b>Uso pessoal.</b> Seus dados ficam só neste navegador e computador. Faça backup em <Link href="/configuracoes?tab=seguranca" className="underline">Configurações</Link>.
+        </div>
+      ) : (
         <div className="rounded-lg border border-sage-200 bg-sage-50 p-3 text-[11px] leading-relaxed text-sage-600">
           <b>Modo demonstração.</b> Dados fictícios salvos só neste navegador. Configure o Supabase para usar com pacientes reais.
         </div>
-      )}
+      ))}
       <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
         <Avatar name={profile?.professional_name || "Profissional"} src={profile?.logo_url} size={32} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{profile?.professional_name || "Profissional"}</p>
           <p className="truncate text-xs text-ink-faint">{profile?.clinic_name || profile?.profession}</p>
         </div>
-        {isSupabaseConfigured && (
+        {(isSupabaseConfigured || isPersonalMode) && (
           <button
             onClick={async () => {
               await signOut();
               router.replace("/login");
             }}
             className="rounded-md p-1.5 text-ink-faint hover:bg-white hover:text-ink"
-            title="Sair"
+            title={isPersonalMode ? "Bloquear (pede a senha novamente, se houver)" : "Sair"}
             aria-label="Sair"
           >
             <LogOut className="h-4 w-4" />

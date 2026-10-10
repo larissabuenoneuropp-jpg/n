@@ -9,5 +9,12 @@ export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
  * ou quando ativado explicitamente com NEXT_PUBLIC_DEMO_MODE=1.
  * Em produção sem Supabase e sem essa variável, o acesso fica bloqueado até configurar o login.
  */
-export const isDemoAllowed = !isSupabaseConfigured && (process.env.NEXT_PUBLIC_DEMO_MODE === "1" || process.env.NODE_ENV !== "production");
+/**
+ * Modo pessoal (uso individual, sem conta): dados guardados só no navegador da profissional,
+ * começando vazio (sem dados fictícios). Ative com NEXT_PUBLIC_PERSONAL_MODE=1.
+ * Opcional: APP_PASSWORD (variável de servidor) pede uma senha simples para abrir o site.
+ */
+export const isPersonalMode = !isSupabaseConfigured && process.env.NEXT_PUBLIC_PERSONAL_MODE === "1";
+
+export const isDemoAllowed = !isSupabaseConfigured && (isPersonalMode || process.env.NEXT_PUBLIC_DEMO_MODE === "1" || process.env.NODE_ENV !== "production");
 export const isSetupRequired = !isSupabaseConfigured && !isDemoAllowed;

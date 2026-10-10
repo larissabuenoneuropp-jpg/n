@@ -135,6 +135,15 @@ export function detectPending(d: {
   const withoutFee = active.filter((p) => p.payment_type === "particular" && !d.transactions.some((t) => t.patient_id === p.id && monthKey(t.due_date) === thisMonth));
   if (withoutFee.length) out.push({ key: `mensalidades:${thisMonth}`, title: `Lançar cobranças do mês (${withoutFee.length} paciente(s))`, description: withoutFee.map((p) => p.name).join(", "), priority: "media", category: "Financeiro", href: "/financeiro" });
 
+  // Uso pessoal (dados só no navegador): lembrar do backup semanal
+  if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PERSONAL_MODE === "1") {
+    let last: string | null = null;
+    try { last = localStorage.getItem("np:last-backup"); } catch { /* sem armazenamento */ }
+    if (!last || Date.now() - new Date(last).getTime() > 7 * 86400000) {
+      out.push({ key: "backup-semanal", title: "Fazer o backup semanal dos seus dados", description: last ? `Último backup: ${new Date(last).toLocaleDateString("pt-BR")}.` : "Nenhum backup feito ainda. Seus dados ficam só neste navegador.", priority: "alta", category: "Administrativo", href: "/configuracoes?tab=seguranca" });
+    }
+  }
+
   // Cadastro incompleto
   if (!d.profile?.document) out.push({ key: "perfil-cpf", title: "Preencher seu CPF/CNPJ em Configurações", description: "Necessário para o contrato.", priority: "alta", category: "Administrativo", href: "/configuracoes" });
 

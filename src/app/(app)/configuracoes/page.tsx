@@ -6,7 +6,8 @@ import { Avatar, Button, Card, CardHeader, Field, Input, PageHeader, Select, Tab
 import { useData } from "@/lib/data/provider";
 import { DemoStore } from "@/lib/data/demo-store";
 import { DEFAULT_TEMPLATES, LEGACY_RELATORIO_PREFIX, REPORT_TYPES, TEMPLATE_VARS } from "@/lib/templates";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isPersonalMode, isSupabaseConfigured } from "@/lib/supabase/config";
+import { storageEstimate } from "@/lib/data/local-files";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import type { AuditLog, BillingRules, Profile } from "@/lib/types";
 import { BILLING_TEMPLATES, DEFAULT_BILLING_RULES } from "@/lib/billing";
@@ -69,6 +70,8 @@ function SettingsInner() {
   const [saving, setSaving] = useState(false);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [pwd, setPwd] = useState("");
+  const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null);
+  useEffect(() => { if (store.mode === "demo") storageEstimate().then(setUsage); }, [store.mode]);
 
   useEffect(() => {
     if (profile) {
@@ -96,7 +99,8 @@ function SettingsInner() {
 
   async function exportData() {
     const data = await store.exportAll();
-    downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), `neuroplanner-backup-${new Date().toISOString().slice(0, 10)}.json`);
+    downloadBlob(new Blob([JSON.stringify(data)], { type: "application/json" }), `neuroplanner-backup-${new Date().toISOString().slice(0, 10)}.json`);
+    try { localStorage.setItem("np:last-backup", new Date().toISOString()); } catch { /* sem armazenamento */ }
     toast("Backup exportado. Guarde o arquivo em local seguro.");
   }
 
@@ -238,7 +242,13 @@ function SettingsInner() {
                   <li>• Registro de auditoria de criação, alteração e exclusão.</li>
                   <li>• A IA recebe apenas dados clínicos pseudonimizados (sem nome, contato ou escola).</li>
                 </ul>
-                {!isSupabaseConfigured && <p className="mx-5 mb-5 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Modo demonstração: os dados ficam somente no navegador e as proteções de servidor não se aplicam. Não insira dados reais de pacientes.</p>}
+                {!isSupabaseConfigured && (isPersonalMode ? (
+                  <p className="mx-5 mb-5 rounded-lg bg-sage-50 p-3 text-xs text-sage-700">
+                    <b>Uso pessoal:</b> os dados ficam somente neste navegador, neste computador — não vão para nenhum servidor e não aparecem para quem abrir o site em outro aparelho.
+                    Atenção: se o navegador for limpo ou o computador trocado, os dados se perdem. <b>Exporte um backup toda semana</b> e guarde em local seguro (o arquivo contém dados sensíveis).
+                    Use sempre o mesmo navegador. Proteja o computador com senha.
+                  </p>
+                ) : <p className="mx-5 mb-5 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Modo demonstração: os dados ficam somente no navegador e as proteções de servidor não se aplicam. Não insira dados reais de pacientes.</p>)}
               </Card>
               <Card>
                 <CardHeader title="Backup e portabilidade (LGPD)" icon={<Download className="h-4 w-4" />} />
@@ -246,9 +256,31 @@ function SettingsInner() {
                   <p>Exporte todos os seus dados em JSON. Recomendado periodicamente, além do backup do provedor.</p>
                   <Button variant="secondary" onClick={exportData}><Download className="h-4 w-4" /> Exportar meus dados</Button>
                   {store.mode === "demo" && (
-                    <Button variant="danger" onClick={() => { if (confirm("Apagar os dados da demonstração e recarregar os exemplos?")) { DemoStore.reset(); location.reload(); } }}>
-                      <RotateCcw className="h-4 w-4" /> Reiniciar demonstração
-                    </Button>
+                    <>
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
+                        <Upload className="h-4 w-4" /> Restaurar backup
+                        <input type="file" accept="application/json,.json" className="hidden" onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (!confirm("Restaurar este backup? Os dados atuais deste navegador serão substituídos.")) return;
+                          try {
+                            await DemoStore.importAll(JSON.parse(await file.text()));
+                            toast("Backup restaurado");
+                            location.reload();
+                          } catch (err) {
+                            toast(err instanceof Error ? err.message : "Backup inválido", "error");
+                          }
+                        }} />
+                      </label>
+                      <Button variant="danger" onClick={async () => {
+                        if (!confirm(isPersonalMode ? "Apagar TODOS os seus dados deste navegador? Faça um backup antes. Esta ação não pode ser desfeita." : "Apagar os dados da demonstração e recarregar os exemplos?")) return;
+                        await DemoStore.reset();
+                        location.reload();
+                      }}>
+                        <RotateCcw className="h-4 w-4" /> {isPersonalMode ? "Apagar todos os dados" : "Reiniciar demonstração"}
+                      </Button>
+                      {usage && <p className="text-xs text-ink-faint">Espaço usado neste navegador: {(usage.usage / 1024 / 1024).toFixed(1)} MB{usage.quota ? ` de ~${Math.round(usage.quota / 1024 / 1024)} MB disponíveis` : ""}.</p>}
+                    </>
                   )}
                 </div>
               </Card>

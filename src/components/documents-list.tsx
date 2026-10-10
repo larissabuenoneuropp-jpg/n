@@ -111,7 +111,7 @@ export function DocumentsList({ patientId }: { patientId?: string }) {
       <Modal open={open} onClose={() => setOpen(false)} title="Enviar documento"
         footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={upload} loading={uploading}>Enviar</Button></>}>
         <div className="space-y-3">
-          <Field label="Arquivo" hint={store.mode === "demo" ? "Modo demonstração: até 1,5 MB." : `Até ${MAX_MB} MB. Armazenado em bucket privado.`}>
+          <Field label="Arquivo" hint={store.mode === "demo" ? "Até 25 MB. Guardado só neste navegador." : `Até ${MAX_MB} MB. Armazenado em bucket privado.`}>
             <Input type="file" className="py-1.5" accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })} />
           </Field>
           {!patientId && (

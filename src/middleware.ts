@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isSetupRequired, isSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config";
+import { isPersonalMode, isSetupRequired, isSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config";
+import { UNLOCK_COOKIE, unlockToken } from "@/lib/personal-auth";
 
 const PUBLIC_PATHS = ["/login", "/auth"];
 
@@ -15,6 +16,22 @@ export async function middleware(request: NextRequest) {
     url.search = "";
     return NextResponse.redirect(url);
   }
+  // Modo pessoal: sem conta. Se APP_PASSWORD estiver definida, pede só essa senha.
+  if (isPersonalMode) {
+    const pwd = process.env.APP_PASSWORD;
+    const isLogin = path0.startsWith("/login");
+    if (!pwd) {
+      if (isLogin) return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.next();
+    }
+    if (path0.startsWith("/api/unlock")) return NextResponse.next();
+    const ok = request.cookies.get(UNLOCK_COOKIE)?.value === (await unlockToken(pwd));
+    if (ok && isLogin) return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (ok || isLogin) return NextResponse.next();
+    if (path0.startsWith("/api")) return NextResponse.json({ error: "Bloqueado" }, { status: 401 });
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   // Modo demonstração explícito: sem autenticação.
   if (!isSupabaseConfigured) return NextResponse.next();
 

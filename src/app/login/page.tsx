@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button, Field, Input } from "@/components/ui";
-import { isSetupRequired, isSupabaseConfigured } from "@/lib/supabase/config";
+import { isPersonalMode, isSetupRequired, isSupabaseConfigured } from "@/lib/supabase/config";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
 function passwordProblem(p: string) {
@@ -14,6 +14,36 @@ function passwordProblem(p: string) {
   return null;
 }
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+
+/** Modo pessoal: apenas a senha definida em APP_PASSWORD (sem conta, sem e-mail). */
+function PersonalUnlock() {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setErr(null);
+        const res = await fetch("/api/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
+        setLoading(false);
+        if (!res.ok) return setErr("Senha incorreta.");
+        router.replace("/dashboard");
+        router.refresh();
+      }}
+    >
+      <p className="text-center text-sm text-ink-soft">Uso pessoal e privado. Digite sua senha para abrir.</p>
+      <Field label="Senha">
+        <Input required autoFocus type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+      </Field>
+      {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{err}</p>}
+      <Button type="submit" className="w-full" loading={loading}>Entrar</Button>
+    </form>
+  );
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -31,6 +61,8 @@ function LoginForm() {
     params.get("reason") === "confirm" ? "Confirme seu e-mail pelo link que enviamos antes de acessar o NeuroPlanner." : null,
   );
   const [err, setErr] = useState<string | null>(null);
+
+  if (isPersonalMode) return <PersonalUnlock />;
 
   if (isSetupRequired) {
     return (

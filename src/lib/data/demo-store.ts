@@ -3,6 +3,19 @@ import type { AuditLog, Instrument, Profile, TableMap, TableName } from "@/lib/t
 import { uid } from "@/lib/utils";
 import type { DataStore, ListOptions } from "./store";
 import { buildSeed } from "./seed";
+import { isPersonalMode } from "@/lib/supabase/config";
+import { allFileKeys, blobToDataUrl, clearFiles, dataUrlToBlob, deleteFile, getFile, isIdbAvailable, putFile, requestPersistence } from "./local-files";
+
+/** Modo pessoal: começa vazio (sem pacientes fictícios), mantendo bibliotecas, modelos e rotina. */
+function initialData() {
+  const seed = buildSeed();
+  if (!isPersonalMode) return seed;
+  return {
+    ...seed,
+    patients: [], assessments: [], intervention_plans: [], appointments: [], session_records: [], documents: [],
+    transactions: [], reports: [], assessment_records: [], receipts: [], social_posts: [], charge_messages: [],
+  };
+}
 
 const PREFIX = "np:demo:";
 const TABLES: TableName[] = [
@@ -31,8 +44,10 @@ export class DemoStore implements DataStore {
   readonly mode = "demo" as const;
 
   constructor() {
+    if (typeof window !== "undefined") requestPersistence();
     if (typeof window !== "undefined" && !read("seeded", false)) {
-      const seed = buildSeed();
+      const seed = initialData();
+      if (isPersonalMode) ["seeded_v2", "seeded_v3", "seeded_v4", "seeded_v5", "seeded_v6", "seeded_v7"].forEach((k) => write(k, true));
       for (const t of TABLES) write(t, seed[t] ?? []);
       write("profile", seed.profile);
       write("audit", []);
@@ -153,36 +168,66 @@ export class DemoStore implements DataStore {
   }
 
   async upload(file: File) {
-    if (file.size > 1.5 * 1024 * 1024) {
-      throw new Error("No modo demonstração o limite é 1,5 MB por arquivo. Configure o Supabase para arquivos maiores.");
+    // Arquivos vão para o IndexedDB (bem mais espaço); sem IndexedDB, data URL no localStorage (limite pequeno)
+    if (isIdbAvailable()) {
+      if (file.size > 25 * 1024 * 1024) throw new Error("Limite de 25 MB por arquivo neste modo.");
+      const key = `idb:${uid()}`;
+      await putFile(key, file);
+      return key;
     }
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
+    if (file.size > 1.5 * 1024 * 1024) throw new Error("Limite de 1,5 MB por arquivo neste navegador.");
+    return await blobToDataUrl(file);
   }
 
   async fileUrl(path: string) {
-    return path; // no modo demo o "caminho" já é um data URL
+    if (path.startsWith("idb:")) {
+      const blob = await getFile(path);
+      if (!blob) throw new Error("Arquivo não encontrado neste navegador.");
+      return URL.createObjectURL(blob);
+    }
+    return path; // data URL
   }
 
-  async removeFile() {}
+  async removeFile(path: string) {
+    if (path.startsWith("idb:")) await deleteFile(path).catch(() => {});
+  }
 
   async auditLogs(limit = 100) {
     return read<AuditLog[]>("audit", []).slice(0, limit);
   }
 
+  /** Backup completo: dados + arquivos (em base64) — use para guardar ou levar para outro computador. */
   async exportAll() {
-    const out: Record<string, unknown> = { exported_at: new Date().toISOString(), profile: await this.getProfile() };
+    const out: Record<string, unknown> = { format: "neuroplanner-backup", version: 1, exported_at: new Date().toISOString(), profile: await this.getProfile() };
     for (const t of TABLES) out[t] = this.rows(t);
+    if (isIdbAvailable()) {
+      const files: Record<string, string> = {};
+      for (const key of await allFileKeys()) {
+        const blob = await getFile(String(key));
+        if (blob) files[String(key)] = await blobToDataUrl(blob);
+      }
+      out._files = files;
+    }
     return out;
   }
 
-  static reset() {
+  /** Restaura um backup gerado por exportAll (substitui os dados deste navegador). */
+  static async importAll(data: Record<string, unknown>) {
+    if (!data || typeof data !== "object" || !("profile" in data)) throw new Error("Arquivo de backup inválido.");
+    for (const t of TABLES) write(t, Array.isArray(data[t]) ? data[t] : []);
+    write("profile", data.profile);
+    ["seeded", "seeded_v2", "seeded_v3", "seeded_v4", "seeded_v5", "seeded_v6", "seeded_v7"].forEach((k) => write(k, true));
+    const files = (data._files ?? {}) as Record<string, string>;
+    if (isIdbAvailable()) {
+      await clearFiles();
+      for (const [key, url] of Object.entries(files)) await putFile(key, await dataUrlToBlob(url));
+    }
+  }
+
+  static async reset() {
     Object.keys(localStorage)
       .filter((k) => k.startsWith(PREFIX))
       .forEach((k) => localStorage.removeItem(k));
+    if (isIdbAvailable()) await clearFiles().catch(() => {});
   }
 }

@@ -3,6 +3,8 @@ import { SYSTEM_PROMPT, TASK_INSTRUCTIONS, type AiTask } from "@/lib/ai/prompts"
 import { mockResponse } from "@/lib/ai/mock";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { isPersonalMode } from "@/lib/supabase/config";
+import { personalUnlocked } from "@/lib/personal-auth";
 
 export const runtime = "nodejs";
 
@@ -49,7 +51,8 @@ export async function POST(req: Request) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   // Em produção sem Supabase (sem login), não expor a chave da OpenAI a qualquer visitante.
-  const publicDemo = !isSupabaseConfigured && process.env.NODE_ENV === "production" && process.env.ALLOW_PUBLIC_AI !== "1";
+  const personalOk = isPersonalMode && (await personalUnlocked(req));
+  const publicDemo = !isSupabaseConfigured && process.env.NODE_ENV === "production" && !personalOk && process.env.ALLOW_PUBLIC_AI !== "1";
   if (!apiKey || publicDemo) {
     return NextResponse.json({ demo: true, result: mockResponse(task, body.input ?? {}) });
   }

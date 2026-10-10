@@ -104,6 +104,21 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 - Não há testes automatizados no repositório ainda (os fluxos foram verificados manualmente no navegador).
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.
 
+## Uso pessoal, sem conta (recomendado para uma única profissional)
+
+Para usar sozinha, sem criar conta nem confirmar e-mail:
+
+1. No Netlify, em *Environment variables*, crie `NEXT_PUBLIC_PERSONAL_MODE` = `1`.
+2. (Recomendado) Crie também `APP_PASSWORD` com uma senha forte: o site passa a pedir só essa senha. Sem ela o site abre direto, mas a IA real fica desligada (para ninguém usar sua chave da OpenAI).
+3. (Opcional) `OPENAI_API_KEY` para a IA.
+4. *Deploys → Trigger deploy → Clear cache and deploy site*.
+
+Como funciona: **os dados ficam somente no navegador do seu computador** (localStorage + IndexedDB) — não vão para servidor nenhum e quem abrir o link em outro aparelho vê um sistema vazio. Cuidados:
+- Use sempre o mesmo navegador e computador; limpar os dados do navegador apaga tudo.
+- **Faça o backup semanal** em Configurações › Segurança › Exportar meus dados (inclui os arquivos). O mesmo arquivo restaura tudo em outro computador (Restaurar backup). O backup contém dados sensíveis: guarde em local seguro.
+- Os dados não sincronizam entre computador e celular. Para isso, use o modo com Supabase.
+- Depois do deploy, abra o site numa janela anônima para confirmar que a senha é pedida.
+
 ## Publicar no Netlify
 
 > **Importante:** o NeuroPlanner é um app Next.js com rotas de servidor (IA, Instagram, login). Ele **não funciona arrastando a pasta ou o ZIP** para o Netlify Drop — essa opção só publica sites estáticos. O Netlify precisa **compilar** o projeto. O arquivo `netlify.toml` já está configurado.
