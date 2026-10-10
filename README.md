@@ -93,7 +93,7 @@ Resumo do que está implementado (e do que **não** está), item por item:
 | Segredos fora do Git | `.env*` no `.gitignore`; `node scripts/check-secrets.mjs` (também no GitHub Actions) procura chaves nos arquivos. O histórico foi verificado: sem chaves nem dados reais. Ative também o *Secret scanning* do GitHub (Settings › Code security). |
 | Chave pública do banco | A `anon key` do Supabase é pública por natureza; a proteção vem do RLS. A `service_role` **nunca** é usada no app. |
 | RLS | Ativado em todas as tabelas (`owner_id = auth.uid()`), bucket privado com pastas por usuária; visitantes sem login (`anon`) sem nenhuma permissão (migração 0007). |
-| Criptografia de dados | Uso pessoal: **cofre local** AES-256-GCM (dados + arquivos + backups), chave derivada da senha com PBKDF2-SHA256 (600 mil iterações). Supabase: TLS + criptografia em repouso do provedor. |
+| Criptografia de dados | Uso pessoal: **cofre local** AES-256-GCM (dados + arquivos + backups), chave derivada da senha com **Argon2id** (64 MiB, 3 passadas — parâmetros da RFC 9106; cofres antigos em PBKDF2 são convertidos no desbloqueio). Supabase: TLS + criptografia em repouso do provedor. |
 | Autenticação no servidor | Supabase: middleware e rotas validam a sessão com `getUser()` e exigem e-mail confirmado. Uso pessoal: rotas exigem `APP_ACCESS_KEY` (comparação em tempo constante). |
 | Restringir acessos | IA e Instagram reais **bloqueados** no uso pessoal publicado enquanto `APP_ACCESS_KEY` não estiver configurada. |
 | Mass assignment | `id`, `owner_id`, `created_at` e `updated_at` são descartados no app **e** forçados por trigger no banco; registros só apontam para pacientes da mesma conta (migração 0007). Rotas copiam só os campos esperados. |
@@ -129,7 +129,8 @@ Sem as variáveis do Supabase, o NeuroPlanner **não pede conta nem e-mail**: no
 
 Como funciona:
 - **Os dados ficam só no navegador do seu computador**, criptografados (AES-256). Não vão para servidor nenhum; quem abrir o link em outro aparelho vê apenas a tela de criar senha, sem nenhum dado.
-- **Bloqueio:** botão de cadeado (barra lateral), bloqueio automático após 15 min sem uso, e ao recarregar a página (F5) ou fechar a aba — a chave só existe na memória enquanto o cofre está aberto.
+- **Bloqueio:** botão de cadeado (barra lateral); automático após 5, 10 (padrão), 15 ou 30 min sem uso; ao minimizar ou trocar de aba (na hora, após 1 min — padrão — ou desligado); e ao recarregar a página (F5) ou fechar a aba — a chave só existe na memória enquanto o cofre está aberto. A tela fica desfocada sempre que você sai da aba.
+- **Senha forte obrigatória:** mínimo de 12 caracteres e medidor de força que recusa nomes, “senha”, datas, sequências e repetições. Quem tinha senha fraca recebe um aviso para trocar. Após 3 senhas erradas, espera crescente (5 s, 10 s, 20 s… até 5 min), mesmo recarregando a página.
 - **Esqueceu a senha? Não há recuperação.** Anote a senha em lugar seguro. A única saída é apagar o cofre e restaurar um backup.
 - **Backup semanal** em Configurações › Segurança › Exportar meus dados: o arquivo sai **criptografado** (inclui os arquivos) e abre com a senha do cofre que valia na data do backup. Guarde uma cópia fora do computador.
 - Dados de versões anteriores (sem criptografia) são migrados para o cofre e apagados da forma aberta no primeiro acesso. Backups antigos (sem criptografia) ainda podem ser restaurados — depois apague esses arquivos.
@@ -146,7 +147,8 @@ Sem `APP_ACCESS_KEY`, a IA real e as métricas do Instagram ficam bloqueadas no 
 
 ### Limites do cofre (seja realista)
 - Protege contra quem pega o computador desligado/bloqueado, contra outra pessoa abrindo o site e contra cópia dos arquivos do navegador. **Não protege** contra vírus/keylogger no computador nem contra alguém usando o computador com o cofre aberto — bloqueie ao se afastar.
-- A força depende da senha: use pelo menos 10 caracteres (uma frase com números é ótima).
+- A força depende da senha: o Argon2id deixa cada tentativa cara (memória + tempo), mas uma senha adivinhável continua adivinhável. Use 3 ou 4 palavras sem relação, com números ou símbolos.
+- A espera após senhas erradas vale para quem usa a tela do site; quem copiar os arquivos do navegador pode tentar fora dele — por isso o que protege de verdade é a senha forte + Argon2id.
 - LGPD exige também processos (consentimento, guarda, descarte, contrato com a OpenAI se usar a IA) — o software ajuda, não garante conformidade sozinho.
 
 ## Publicar no Netlify

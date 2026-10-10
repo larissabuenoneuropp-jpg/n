@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyRound, Lock, Server } from "lucide-react";
-import { Button, Card, CardHeader, Field, Input, Modal, useToast } from "@/components/ui";
-import { passphraseProblem } from "@/components/vault-gate";
-import { changePassphrase, decryptBackup, isEncryptedBackup } from "@/lib/data/vault";
+import { Button, Card, CardHeader, Field, Input, Modal, Select, useToast } from "@/components/ui";
+import { passphraseProblem, StrengthMeter } from "@/components/vault-gate";
+import { changePassphrase, decryptBackup, isEncryptedBackup, vaultKdf, type Kdf } from "@/lib/data/vault";
+import { getLockSettings, setLockSettings, type LockSettings } from "@/lib/lock-settings";
 import { getAccessKey, setAccessKey } from "@/lib/api-client";
 import { DemoStore } from "@/lib/data/demo-store";
 
@@ -14,6 +15,15 @@ export function VaultCard() {
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lockCfg, setLockCfg] = useState<LockSettings>(getLockSettings);
+  const [kdf, setKdf] = useState<Kdf | null>(null);
+  useEffect(() => { vaultKdf().then(setKdf).catch(() => {}); }, [busy]);
+  const saveLock = (patch: Partial<LockSettings>) => {
+    const next = { ...lockCfg, ...patch };
+    setLockCfg(next);
+    setLockSettings(next);
+    toast("Preferência de bloqueio salva");
+  };
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const problem = passphraseProblem(p1);
@@ -36,12 +46,27 @@ export function VaultCard() {
         <Button size="sm" variant="secondary" onClick={() => window.dispatchEvent(new Event("np:lock"))}><Lock className="h-3.5 w-3.5" /> Bloquear agora</Button>
       } />
       <form onSubmit={submit} className="space-y-3 p-5">
-        <p className="text-xs text-ink-soft">Os dados e arquivos ficam criptografados (AES-256) neste navegador. O cofre bloqueia sozinho após 15 minutos sem uso.</p>
+        <p className="text-xs text-ink-soft">
+          Os dados e arquivos ficam criptografados (AES-256) neste navegador.
+          {kdf && <> Chave derivada da senha com <b>{kdf.name === "Argon2id" ? `Argon2id (${Math.round(kdf.memoryKiB / 1024)} MiB, ${kdf.iterations} passadas)` : `PBKDF2-SHA256 (${kdf.iterations.toLocaleString("pt-BR")} iterações)`}</b>.</>}
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Bloquear após ficar sem uso">
+            <Select value={String(lockCfg.idleMin)} onChange={(e) => saveLock({ idleMin: Number(e.target.value) as LockSettings["idleMin"] })}
+              options={[5, 10, 15, 30].map((m) => ({ value: String(m), label: `${m} minutos` }))} aria-label="Bloquear após ficar sem uso" />
+          </Field>
+          <Field label="Ao minimizar ou trocar de aba">
+            <Select value={lockCfg.onHide} onChange={(e) => saveLock({ onHide: e.target.value as LockSettings["onHide"] })} aria-label="Ao minimizar ou trocar de aba"
+              options={[{ value: "now", label: "Bloquear na hora" }, { value: "1min", label: "Bloquear após 1 minuto" }, { value: "off", label: "Só pela inatividade" }]} />
+          </Field>
+        </div>
+        <p className="text-[11px] text-ink-faint">A tela fica desfocada sempre que você sai da aba.</p>
         <Field label="Senha atual"><Input type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></Field>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Nova senha"><Input type="password" autoComplete="new-password" value={p1} onChange={(e) => setP1(e.target.value)} /></Field>
           <Field label="Repita a nova senha"><Input type="password" autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} /></Field>
         </div>
+        <StrengthMeter value={p1} />
         <Button type="submit" loading={busy} disabled={!cur || !p1}><KeyRound className="h-4 w-4" /> Trocar senha do cofre</Button>
       </form>
     </Card>

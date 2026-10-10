@@ -3,7 +3,9 @@
  * Cofre local do modo pessoal: os dados ficam no navegador, mas criptografados (AES-GCM 256).
  *
  * - Uma chave de dados (DEK) aleatória criptografa os registros e os arquivos.
- * - A DEK é guardada "embrulhada" por uma chave derivada da senha (PBKDF2-SHA256).
+ * - A DEK é guardada "embrulhada" por uma chave derivada da senha com Argon2id (64 MiB de memória,
+ *   3 passadas) — caro de adivinhar até com placas de vídeo. Cofres antigos (PBKDF2-SHA256) são
+ *   convertidos automaticamente no próximo desbloqueio.
  * - Trocar a senha só reembrulha a DEK; os dados não precisam ser recriptografados.
  * - Sem a senha não há como recuperar os dados (não existe servidor nem "esqueci a senha").
  */
@@ -12,16 +14,25 @@ import { allFileKeys, getFile, isIdbAvailable, putFile } from "./local-files";
 
 const DB = "neuroplanner-vault";
 const STORE = "kv";
-const ITERATIONS = 600_000;
 const LEGACY_PREFIX = "np:demo:";
+const FAILS_KEY = "np:vault-fails"; // só o número de tentativas erradas (nada sensível)
+
+export type Kdf =
+  | { name: "PBKDF2-SHA256"; iterations: number }
+  | { name: "Argon2id"; iterations: number; memoryKiB: number; parallelism: number };
+/** Parâmetros recomendados pela RFC 9106 (2ª opção: t=3, m=64 MiB), com 1 via por rodar em WebAssembly. */
+const ARGON2: Kdf = { name: "Argon2id", iterations: 3, memoryKiB: 65_536, parallelism: 1 };
+const PBKDF2: Kdf = { name: "PBKDF2-SHA256", iterations: 600_000 };
 
 interface VaultMeta {
-  v: 1;
+  v: 1 | 2;
   salt: Uint8Array;
-  iterations: number;
+  kdf?: Kdf;
+  iterations?: number; // v1 (PBKDF2)
   wrapIv: Uint8Array;
   wrapped: ArrayBuffer;
 }
+const kdfOf = (m: Pick<VaultMeta, "kdf" | "iterations">): Kdf => m.kdf ?? { name: "PBKDF2-SHA256", iterations: m.iterations ?? 600_000 };
 interface Sealed {
   iv: Uint8Array;
   ct: ArrayBuffer;
@@ -37,7 +48,6 @@ let cache: Map<string, string> | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let saving: Promise<void> = Promise.resolve();
 let inflight = 0;
-let failures = 0;
 
 // ---------- Várias abas abertas ----------
 // Cada aba tem a sua cópia em memória; quando uma grava, as outras recarregam do cofre para não sobrescrever nada.
@@ -92,31 +102,74 @@ const enc = new TextEncoder();
 const dec = new TextDecoder();
 const randomBytes = (n: number) => crypto.getRandomValues(new Uint8Array(n));
 
-async function deriveKek(pass: string, salt: Uint8Array, iterations: number) {
+async function deriveKek(pass: string, salt: Uint8Array, kdf: Kdf) {
+  const usages: KeyUsage[] = ["wrapKey", "unwrapKey"];
+  if (kdf.name === "Argon2id") {
+    const { argon2id } = await import("hash-wasm");
+    const bytes = await argon2id({
+      password: pass.normalize("NFC"), salt, iterations: kdf.iterations, parallelism: kdf.parallelism,
+      memorySize: kdf.memoryKiB, hashLength: 32, outputType: "binary",
+    });
+    try {
+      return await crypto.subtle.importKey("raw", bytes as BufferSource, { name: "AES-GCM" }, false, usages);
+    } finally {
+      bytes.fill(0);
+    }
+  }
   const base = await crypto.subtle.importKey("raw", enc.encode(pass.normalize("NFC")), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: salt as BufferSource, iterations, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: kdf.iterations, hash: "SHA-256" },
     base,
     { name: "AES-GCM", length: 256 },
     false,
-    ["wrapKey", "unwrapKey"],
+    usages,
   );
 }
-async function wrapDek(key: CryptoKey, pass: string) {
+async function wrapDek(key: CryptoKey, pass: string): Promise<VaultMeta> {
   const salt = randomBytes(16);
   const wrapIv = randomBytes(12);
-  const kek = await deriveKek(pass, salt, ITERATIONS);
+  let kdf = ARGON2;
+  let kek: CryptoKey;
+  try {
+    kek = await deriveKek(pass, salt, kdf);
+  } catch {
+    // Navegador sem WebAssembly: usa PBKDF2 (ainda forte, mas menos resistente a placas de vídeo)
+    kdf = PBKDF2;
+    kek = await deriveKek(pass, salt, kdf);
+  }
   const wrapped = await crypto.subtle.wrapKey("raw", key, kek, { name: "AES-GCM", iv: wrapIv as BufferSource });
-  return { v: 1, salt, iterations: ITERATIONS, wrapIv, wrapped } as VaultMeta;
+  return { v: 2, salt, kdf, wrapIv, wrapped };
 }
-async function unwrapDek(meta: Pick<VaultMeta, "salt" | "iterations" | "wrapIv" | "wrapped">, pass: string) {
-  const kek = await deriveKek(pass, meta.salt, meta.iterations);
+async function unwrapDek(meta: Pick<VaultMeta, "salt" | "kdf" | "iterations" | "wrapIv" | "wrapped">, pass: string) {
+  const kek = await deriveKek(pass, meta.salt, kdfOf(meta));
   try {
     return await crypto.subtle.unwrapKey("raw", meta.wrapped, kek, { name: "AES-GCM", iv: meta.wrapIv as BufferSource }, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
   } catch {
     throw new Error("Senha incorreta.");
   }
 }
+
+/** Tentativas erradas ficam registradas mesmo se a página for recarregada (espera crescente). */
+function readFails() {
+  try {
+    const f = JSON.parse(localStorage.getItem(FAILS_KEY) ?? "null") as { n: number; at: number } | null;
+    return f && Date.now() - f.at < 60 * 60_000 ? f.n : 0;
+  } catch {
+    return 0;
+  }
+}
+function writeFails(n: number) {
+  try {
+    if (n) localStorage.setItem(FAILS_KEY, JSON.stringify({ n, at: Date.now() }));
+    else localStorage.removeItem(FAILS_KEY);
+  } catch { /* sem armazenamento */ }
+}
+/** Segundos de espera antes da próxima tentativa (0 = liberado). */
+export function unlockDelaySeconds() {
+  const n = readFails();
+  return n < 3 ? 0 : Math.min(300, 5 * 2 ** (n - 3));
+}
+
 async function seal(key: CryptoKey, bytes: BufferSource): Promise<Sealed> {
   const iv = randomBytes(12);
   return { iv, ct: await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, bytes) };
@@ -206,22 +259,38 @@ export async function createVault(pass: string) {
 }
 
 export async function unlockVault(pass: string) {
-  if (failures > 0) await new Promise((r) => setTimeout(r, Math.min(30_000, 1000 * 2 ** (failures - 1))));
+  const wait = unlockDelaySeconds();
+  if (wait > 0) throw new Error(`Muitas tentativas erradas. Aguarde ${wait} segundos e tente de novo.`);
   const meta = await getMeta();
   if (!meta) throw new Error("Nenhum cofre encontrado neste navegador.");
   let key: CryptoKey;
   try {
     key = await unwrapDek(meta, pass);
   } catch (e) {
-    failures++;
+    writeFails(readFails() + 1);
     throw e;
   }
   const data = await getData();
   const obj = data ? (JSON.parse(dec.decode(await open(key, data))) as Record<string, string>) : {};
-  failures = 0;
+  writeFails(0);
   dek = key;
   cache = new Map(Object.entries(obj));
   bus();
+  // Cofre antigo (PBKDF2): reembrulha a chave com Argon2id
+  let upgraded = false;
+  if (kdfOf(meta).name !== "Argon2id") {
+    try {
+      const fresh = await wrapDek(key, pass);
+      if (fresh.kdf?.name === "Argon2id") { await kv("readwrite", (s) => s.put(fresh, "meta")); upgraded = true; }
+    } catch { /* segue com o formato antigo */ }
+  }
+  return { upgraded };
+}
+
+/** Parâmetros do cofre atual (para mostrar em Configurações). */
+export async function vaultKdf() {
+  const meta = await getMeta();
+  return meta ? kdfOf(meta) : null;
 }
 
 /** Grava o que estiver pendente e apaga a chave e os dados da memória. `everywhere` bloqueia também as outras abas. */
@@ -288,7 +357,7 @@ export async function encryptBackup(plain: Record<string, unknown>) {
     version: 1,
     exported_at: new Date().toISOString(),
     note: "Backup criptografado do NeuroPlanner. Só abre no NeuroPlanner, com a senha do cofre usada quando ele foi gerado.",
-    kdf: { name: "PBKDF2-SHA256", salt: toB64(meta.salt), iterations: meta.iterations },
+    kdf: { ...kdfOf(meta), salt: toB64(meta.salt) },
     key: { iv: toB64(meta.wrapIv), wrapped: toB64(meta.wrapped) },
     iv: toB64(sealed.iv),
     ct: toB64(sealed.ct),
@@ -298,9 +367,15 @@ export async function encryptBackup(plain: Record<string, unknown>) {
 export const isEncryptedBackup = (d: unknown) => !!d && typeof d === "object" && (d as { format?: string }).format === ENCRYPTED_BACKUP_FORMAT;
 
 export async function decryptBackup(d: Record<string, unknown>, pass: string) {
-  const kdf = d.kdf as { salt: string; iterations: number };
+  const raw = d.kdf as Kdf & { salt: string };
+  if (!raw || typeof raw.salt !== "string") throw new Error("Arquivo de backup inválido.");
+  const kdf: Kdf = raw.name === "Argon2id"
+    ? { name: "Argon2id", iterations: Number(raw.iterations), memoryKiB: Number(raw.memoryKiB), parallelism: Number(raw.parallelism) }
+    : { name: "PBKDF2-SHA256", iterations: Number(raw.iterations) };
+  // Limites para um arquivo adulterado não travar o navegador
+  if (kdf.name === "Argon2id" ? kdf.memoryKiB > 1_048_576 || kdf.iterations > 20 || kdf.parallelism > 8 : kdf.iterations > 5_000_000) throw new Error("Arquivo de backup inválido.");
   const k = d.key as { iv: string; wrapped: string };
-  const key = await unwrapDek({ salt: fromB64(kdf.salt), iterations: kdf.iterations, wrapIv: fromB64(k.iv), wrapped: fromB64(k.wrapped).buffer as ArrayBuffer }, pass);
+  const key = await unwrapDek({ salt: fromB64(raw.salt), kdf, wrapIv: fromB64(k.iv), wrapped: fromB64(k.wrapped).buffer as ArrayBuffer }, pass);
   try {
     const bytes = await open(key, { iv: fromB64(d.iv as string), ct: fromB64(d.ct as string).buffer as ArrayBuffer });
     return JSON.parse(dec.decode(bytes)) as Record<string, unknown>;

@@ -12,9 +12,10 @@ const typekit = process.env.NEXT_PUBLIC_ADOBE_FONTS_KIT ? "https://use.typekit.n
 
 // Content-Security-Policy: só carrega scripts/estilos/conexões do próprio site (e do Supabase, se configurado).
 // 'unsafe-inline' em scripts é exigido pelo Next.js sem nonce; ainda assim bloqueia scripts de outros domínios.
+// 'wasm-unsafe-eval' permite apenas compilar WebAssembly (Argon2id do cofre), não eval() de JavaScript.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
   `style-src 'self' 'unsafe-inline' ${typekit}`.trim(),
   `font-src 'self' data: ${typekit}`.trim(),
   `img-src 'self' data: blob: ${supabaseOrigin}`.trim(),

@@ -4,18 +4,29 @@ import { Lock, ShieldCheck } from "lucide-react";
 import { Logo } from "./logo";
 import { Button, Field, Input } from "./ui";
 import { isPersonalMode } from "@/lib/supabase/config";
-import { createVault, destroyVault, flushVault, hasPendingWrites, isUnlocked, isVaultSupported, lockVault, unlockVault, vaultExists } from "@/lib/data/vault";
+import { createVault, destroyVault, flushVault, hasPendingWrites, isUnlocked, isVaultSupported, lockVault, unlockDelaySeconds, unlockVault, vaultExists } from "@/lib/data/vault";
 import { clearFiles, isIdbAvailable } from "@/lib/data/local-files";
+import { passphraseProblem, passphraseStrength } from "@/lib/passphrase";
+import { getLockSettings } from "@/lib/lock-settings";
+import { cn } from "@/lib/utils";
 
-const IDLE_LOCK_MS = 15 * 60 * 1000; // bloqueia após 15 min sem uso
+export { passphraseProblem };
 
 type State = "checking" | "unsupported" | "setup" | "locked" | "forgot" | "unlocked";
 
-export function passphraseProblem(p: string) {
-  if (p.length < 10) return "Use pelo menos 10 caracteres (uma frase curta é ótima: “café-azul-2026-lua”).";
-  if (/^\d+$/.test(p)) return "Não use só números.";
-  if (/^(.)\1+$/.test(p)) return "Evite repetir o mesmo caractere.";
-  return null;
+/** Barra de força da senha. */
+export function StrengthMeter({ value }: { value: string }) {
+  if (!value) return null;
+  const s = passphraseStrength(value);
+  const colors = ["bg-red-500", "bg-red-400", "bg-amber-400", "bg-emerald-500", "bg-emerald-600"];
+  return (
+    <div className="space-y-1" aria-live="polite">
+      <div className="flex gap-1">
+        {[0, 1, 2, 3].map((i) => <span key={i} className={cn("h-1.5 flex-1 rounded-full", i < Math.max(1, s.score) ? colors[s.score] : "bg-line")} />)}
+      </div>
+      <p className="text-[11px] text-ink-soft">Força: <b>{s.label}</b>{s.problem ? ` — ${s.problem}` : ""}</p>
+    </div>
+  );
 }
 
 /** Modo pessoal: os dados só são abertos (descriptografados) depois da senha do cofre. Não é login nem conta. */
@@ -27,6 +38,8 @@ export function VaultGate({ children }: { children: React.ReactNode }) {
 function Gate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<State>("checking");
   const [notice, setNotice] = useState<string | null>(null);
+  const [weak, setWeak] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     if (!isVaultSupported()) return setState("unsupported");
@@ -48,16 +61,45 @@ function Gate({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("np:lock", onLock);
   }, [state, lock]);
 
-  // Bloqueio automático por inatividade + gravação ao sair da aba
+  // Bloqueio automático por inatividade, ao sair da aba, e gravação antes de fechar
   const last = useRef(Date.now());
+  const [settings, setSettings] = useState(getLockSettings);
   useEffect(() => {
     if (state !== "unlocked") return;
+    setSettings(getLockSettings());
+    const onSettings = () => setSettings(getLockSettings());
+    window.addEventListener("np:lock-settings", onSettings);
+    return () => window.removeEventListener("np:lock-settings", onSettings);
+  }, [state]);
+  useEffect(() => {
+    if (state !== "unlocked") return;
+    const idleMs = settings.idleMin * 60_000;
+    const hideMs = settings.onHide === "now" ? 0 : settings.onHide === "1min" ? 60_000 : Infinity;
+    let hiddenAt = 0;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
     const touch = () => { last.current = Date.now(); };
     const events = ["mousemove", "keydown", "pointerdown", "touchstart", "scroll", "wheel"];
     events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
-    const check = () => { if (Date.now() - last.current > IDLE_LOCK_MS) lock(false); };
-    const iv = setInterval(check, 20_000);
-    const onVis = () => { if (document.visibilityState === "hidden") void flushVault(); else check(); };
+    const check = () => {
+      if (Date.now() - last.current > idleMs) return lock(false);
+      if (hiddenAt && Date.now() - hiddenAt >= hideMs) return lock(false);
+    };
+    const iv = setInterval(check, 15_000);
+    const onVis = () => {
+      if (document.visibilityState === "hidden") {
+        // Desfoca a tela na hora (miniaturas de abas/alternador de janelas não mostram dados)
+        setHidden(true);
+        hiddenAt = Date.now();
+        void flushVault();
+        if (hideMs === 0) void lock(false);
+        else if (Number.isFinite(hideMs)) hideTimer = setTimeout(check, hideMs);
+      } else {
+        if (hideTimer) clearTimeout(hideTimer);
+        check();
+        hiddenAt = 0;
+        setHidden(false);
+      }
+    };
     // Se a gravação criptografada ainda estiver em andamento, o navegador pergunta antes de sair
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasPendingWrites()) return;
@@ -72,12 +114,26 @@ function Gate({ children }: { children: React.ReactNode }) {
       window.removeEventListener("beforeunload", onBeforeUnload);
       events.forEach((e) => window.removeEventListener(e, touch));
       clearInterval(iv);
+      if (hideTimer) clearTimeout(hideTimer);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pagehide", onVis);
     };
-  }, [state, lock]);
+  }, [state, lock, settings]);
 
-  if (state === "unlocked") return <>{children}</>;
+  if (state === "unlocked") {
+    return (
+      <>
+        <div className={cn("transition-[filter] duration-75", hidden && "pointer-events-none select-none blur-xl")} aria-hidden={hidden || undefined}>{children}</div>
+        {weak && (
+          <div role="alert" className="no-print fixed inset-x-3 bottom-20 z-50 mx-auto flex max-w-xl items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 shadow-pop lg:bottom-4">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+            <p className="flex-1">Sua senha do cofre é fraca para as regras novas de segurança. Troque em <a className="underline" href="/configuracoes?tab=seguranca">Configurações → Segurança</a>.</p>
+            <button className="font-medium underline" onClick={() => setWeak(false)}>Depois</button>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-white to-sage-50 px-4 py-10">
@@ -93,7 +149,7 @@ function Gate({ children }: { children: React.ReactNode }) {
             </p>
           )}
           {state === "setup" && <SetupForm onDone={(migrated) => { setNotice(migrated ? "Os dados que já estavam neste navegador foram criptografados." : null); setState("unlocked"); }} />}
-          {state === "locked" && <UnlockForm onDone={() => setState("unlocked")} onForgot={() => setState("forgot")} />}
+          {state === "locked" && <UnlockForm onDone={(isWeak) => { setWeak(isWeak); setState("unlocked"); }} onForgot={() => setState("forgot")} />}
           {state === "forgot" && <ForgotForm onBack={() => setState("locked")} />}
         </div>
         {notice && <p className="mt-3 text-center text-xs text-sage-700">{notice}</p>}
@@ -140,9 +196,10 @@ function SetupForm({ onDone }: { onDone: (migrated: boolean) => void }) {
           </p>
         </div>
       </div>
-      <Field label="Senha do cofre" hint="Mínimo de 10 caracteres. Uma frase com palavras e números é fácil de lembrar e difícil de adivinhar.">
+      <Field label="Senha do cofre" hint="Mínimo de 12 caracteres. Junte 3 ou 4 palavras sem relação, com números ou símbolos (ex.: “tigre-violeta-janela-47”). Evite nomes, datas e “senha”.">
         <Input type="password" autoComplete="new-password" value={p1} onChange={(e) => setP1(e.target.value)} autoFocus />
       </Field>
+      <StrengthMeter value={p1} />
       <Field label="Repita a senha">
         <Input type="password" autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} />
       </Field>
@@ -159,7 +216,7 @@ function SetupForm({ onDone }: { onDone: (migrated: boolean) => void }) {
   );
 }
 
-function UnlockForm({ onDone, onForgot }: { onDone: () => void; onForgot: () => void }) {
+function UnlockForm({ onDone, onForgot }: { onDone: (weak: boolean) => void; onForgot: () => void }) {
   const [pass, setPass] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -170,7 +227,7 @@ function UnlockForm({ onDone, onForgot }: { onDone: () => void; onForgot: () => 
     setErr(null);
     try {
       await unlockVault(pass);
-      onDone();
+      onDone(!!passphraseProblem(pass));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Não foi possível abrir o cofre.");
       setBusy(false);
