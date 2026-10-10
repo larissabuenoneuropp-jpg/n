@@ -5,18 +5,23 @@ import { FileText, Plus, Printer, RefreshCw, Save, Sparkles, Trash2 } from "luci
 import { AiNotice, Badge, Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select, Spinner, Textarea, useToast } from "@/components/ui";
 import { useCollection, useData } from "@/lib/data/provider";
 import { askAI, patientContext } from "@/lib/ai/client";
-import { DEFAULT_TEMPLATES, REPORT_TYPES } from "@/lib/templates";
-import type { Assessment, InterventionPlan, Patient, Profile, Report, SessionRecord } from "@/lib/types";
+import { DEFAULT_TEMPLATES, LEGACY_RELATORIO_PREFIX, REPORT_TYPES } from "@/lib/templates";
+import { ranBlocks } from "@/lib/ran";
+import { DocBody } from "@/components/letterhead-print";
+import { Segmented } from "@/components/ui";
+import type { Assessment, AssessmentRecord, Instrument, InterventionPlan, Patient, Profile, Report, SessionRecord } from "@/lib/types";
 import { ageLabel, fillTemplate, formatDate, today } from "@/lib/utils";
 import { cityDate, contractContent, contractVars } from "@/lib/documents";
 import { LetterheadPrint } from "@/components/letterhead-print";
 
-function buildVars(p: Patient | undefined, prof: Profile | null, plan?: InterventionPlan, assessment?: Assessment, sessions: SessionRecord[] = []) {
+function buildVars(p: Patient | undefined, prof: Profile | null, plan?: InterventionPlan, assessment?: Assessment, sessions: SessionRecord[] = [],
+  records: AssessmentRecord[] = [], instruments: Instrument[] = []) {
   return {
     ...contractVars(p, prof),
+    ...ranBlocks(p, assessment, records, instruments),
     paciente: p?.name, idade: ageLabel(p?.birth_date), nascimento: formatDate(p?.birth_date),
     responsavel: p?.guardians?.[0]?.name, escola: p?.school, serie: p?.grade, diagnostico: p?.diagnosis, hipoteses: p?.hypotheses,
-    queixa: p?.anamnesis?.complaints, profissional: prof?.professional_name, profissao: prof?.profession ?? "Neuropsicopedagoga",
+    queixa: p?.anamnesis?.complaints || "[completar]", profissional: prof?.professional_name, profissao: prof?.profession ?? "Neuropsicopedagoga",
     crnpp: prof?.crnpp, clinica: prof?.clinic_name, data: formatDate(today()),
     cidade_data: cityDate(prof),
     objetivo_geral: plan?.general_objective,
@@ -36,7 +41,9 @@ function NewReportModal({ open, onClose, onCreate, presetType, presetPatient, pr
   const patients = useCollection("patients", { orderBy: "name", ascending: true });
   const [type, setType] = useState(presetType || "relatorio");
   const [patientId, setPatientId] = useState(presetPatient || "");
+  const [assessmentId, setAssessmentId] = useState("");
   const [loading, setLoading] = useState(false);
+  const patientAssessments = useCollection("assessments", { filter: { patient_id: patientId } }, Boolean(patientId));
 
   async function create() {
     if (!patientId) return;
@@ -47,11 +54,16 @@ function NewReportModal({ open, onClose, onCreate, presetType, presetPatient, pr
       const assessments = await store.list("assessments", { filter: { patient_id: patientId } });
       const sessions = await store.list("session_records", { filter: { patient_id: patientId }, orderBy: "date" });
       const plan = plans.find((x) => x.id === presetPlan) ?? plans.find((x) => x.status === "ativo") ?? plans[0];
-      const tpl = profile?.templates?.[type] || DEFAULT_TEMPLATES[type];
+      const assessment = assessments.find((a) => a.id === assessmentId) ?? assessments[0];
+      const records = await store.list("assessment_records", { filter: { patient_id: patientId } });
+      const instruments = await store.list("instruments");
+      // Modelo personalizado da profissional; o modelo antigo de relatório é trocado pelo RAN
+      let tpl = profile?.templates?.[type] || DEFAULT_TEMPLATES[type];
+      if (type === "relatorio" && tpl.startsWith(LEGACY_RELATORIO_PREFIX)) tpl = DEFAULT_TEMPLATES.relatorio;
       const label = REPORT_TYPES.find((t) => t.value === type)?.label ?? type;
       await onCreate({
         patient_id: patientId, type, status: "rascunho", title: `${label} — ${p?.name}`,
-        content: fillTemplate(tpl, buildVars(p, profile, plan, assessments[0], sessions)),
+        content: fillTemplate(tpl, buildVars(p, profile, plan, assessment, sessions, records, instruments)),
       });
       onClose();
     } finally {
@@ -63,7 +75,13 @@ function NewReportModal({ open, onClose, onCreate, presetType, presetPatient, pr
     <Modal open={open} onClose={onClose} title="Novo documento" footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button onClick={create} loading={loading} disabled={!patientId}>Criar</Button></>}>
       <div className="space-y-3">
         <Field label="Tipo de documento"><Select value={type} onChange={(e) => setType(e.target.value)} options={REPORT_TYPES.map((t) => ({ value: t.value, label: t.label }))} /></Field>
-        <Field label="Paciente"><Select value={patientId} onChange={(e) => setPatientId(e.target.value)} placeholder="Selecione" options={patients.data.map((p) => ({ value: p.id, label: p.name }))} /></Field>
+        <Field label="Paciente"><Select value={patientId} onChange={(e) => { setPatientId(e.target.value); setAssessmentId(""); }} placeholder="Selecione" options={patients.data.map((p) => ({ value: p.id, label: p.name }))} /></Field>
+        {type === "relatorio" && patientId && (
+          <Field label="Avaliação" hint="Os quadros de resultados vêm dos registros de aplicação desta avaliação (botão “Aplicar” em cada instrumento).">
+            <Select value={assessmentId} onChange={(e) => setAssessmentId(e.target.value)} placeholder="Mais recente"
+              options={patientAssessments.data.map((a) => ({ value: a.id, label: `${a.title} (${formatDate(a.start_date)})` }))} />
+          </Field>
+        )}
         <p className="text-xs text-ink-faint">O documento é pré-preenchido com dados do prontuário, do plano e das sessões. Tudo é editável.</p>
       </div>
     </Modal>
@@ -76,6 +94,7 @@ function ReportEditor({ report, patient, onSave, onDelete }: { report: Report; p
   const [f, setF] = useState(report);
   const [saving, setSaving] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [view, setView] = useState<"editar" | "ver">("editar");
   const [instruction, setInstruction] = useState("");
   const [aiText, setAiText] = useState<{ text: string; demo: boolean } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -120,7 +139,15 @@ function ReportEditor({ report, patient, onSave, onDelete }: { report: Report; p
         <Button size="sm" className="h-9" loading={saving} onClick={async () => { setSaving(true); await onSave(f).finally(() => setSaving(false)); }}><Save className="h-4 w-4" /> Salvar</Button>
       </Card>
 
-      <Textarea className="no-print min-h-[60vh] font-mono text-[13px]" value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} />
+      <div className="no-print flex items-center justify-between gap-2">
+        <Segmented value={view} onChange={setView} options={[{ value: "editar", label: "Editar texto" }, { value: "ver", label: "Visualizar" }]} />
+        {view === "editar" && <p className="hidden text-[11px] text-ink-faint sm:block">Marcação: ## seção · ### subseção · #### tópico · [[legenda]] · | quadro | colunas |</p>}
+      </div>
+      {view === "editar" ? (
+        <Textarea className="no-print min-h-[60vh] font-mono text-[13px]" value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} />
+      ) : (
+        <Card className="no-print mx-auto max-w-[210mm] px-[18mm] py-[14mm]"><DocBody content={f.content} /></Card>
+      )}
 
       {/* Impressão em papel timbrado (cabeçalho e rodapé em todas as páginas) */}
       <LetterheadPrint content={f.content} profile={profile} />
@@ -135,6 +162,19 @@ function ReportEditor({ report, patient, onSave, onDelete }: { report: Report; p
             <Field label="O que você precisa?" hint="Ex.: 'Redija a seção de análise dos resultados de leitura' ou 'Torne a linguagem mais acessível para a escola'.">
               <Textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} />
             </Field>
+            {f.type === "relatorio" && (
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Transforme as anotações das seções 2 a 7 em texto técnico, em terceira pessoa, no estilo de relatório neuropsicopedagógico (ex.: 'Segundo informações maternas...'). Mantenha a marcação ## / ### / quadros.",
+                  "Redija a seção 10. CONCLUSÃO integrando os achados de cada área da seção 8.2 e da seção 9, sem diagnóstico médico.",
+                  "Redija as INDICAÇÕES (encaminhamentos e orientações à família e à escola) coerentes com os resultados.",
+                ].map((t) => (
+                  <button key={t} type="button" onClick={() => setInstruction(t)} className="rounded-full border border-line px-2.5 py-1 text-left text-[11px] text-ink-soft hover:border-brand-200 hover:text-ink">
+                    {t.split(".")[0]}
+                  </button>
+                ))}
+              </div>
+            )}
             <p className="text-[11px] text-ink-faint">O nome do paciente é substituído por [PACIENTE] antes do envio à IA.</p>
           </div>
         ) : (

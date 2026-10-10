@@ -16,21 +16,24 @@ npm run dev                  # http://localhost:3000
 
 ### Modo demonstração (sem configuração)
 
-Sem as variáveis do Supabase, o app abre em **modo demonstração**: dados fictícios salvos apenas no navegador (localStorage), sem login. Sem `OPENAI_API_KEY`, a IA devolve **respostas de exemplo** (sinalizadas na tela). Use para conhecer o produto — **não insira dados reais de pacientes nesse modo**.
+**Acesso protegido:** em produção, sem Supabase configurado, o site fica bloqueado na tela de login (nenhuma página ou API abre). O modo demonstração só funciona em desenvolvimento (`npm run dev`) ou se `NEXT_PUBLIC_DEMO_MODE=1`.
+
+No modo demonstração: dados fictícios salvos apenas no navegador (localStorage), sem login. Sem `OPENAI_API_KEY`, a IA devolve **respostas de exemplo** (sinalizadas na tela). Use para conhecer o produto — **não insira dados reais de pacientes nesse modo**.
 
 ### Produção (Supabase + OpenAI)
 
 1. Crie um projeto no [Supabase](https://supabase.com).
-2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações) e `0005_social_posts.sql` (conteúdos de Instagram).
-3. Em *Authentication › URL Configuration*, adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento.
-4. Preencha `.env.local`:
+2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações) `0005_social_posts.sql` (conteúdos de Instagram) e `0006_areas_ran_import.sql` (áreas de intervenção, RAN, importação e cobranças).
+3. Em *Authentication › Providers › Email*, mantenha **"Confirm email" ativado**: o NeuroPlanner só libera o acesso depois que o e-mail é confirmado pelo link enviado.
+4. Em *Authentication › URL Configuration*, adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento.
+5. Preencha `.env.local`:
    ```
    NEXT_PUBLIC_SUPABASE_URL=...
    NEXT_PUBLIC_SUPABASE_ANON_KEY=...
    OPENAI_API_KEY=...
    OPENAI_MODEL=gpt-4o-mini   # confira os modelos disponíveis na sua conta OpenAI
    ```
-5. `npm run build && npm start` (ou deploy na Vercel com as mesmas variáveis).
+6. `npm run build && npm start` (ou deploy na Vercel com as mesmas variáveis).
 
 No primeiro acesso, as bibliotecas de atividades e de testes/protocolos são copiadas para a conta da profissional.
 
@@ -51,6 +54,10 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 | **Pacientes** | Prontuário completo (foto, idade automática, responsáveis, escola, diagnóstico/hipóteses, convênio/particular, valor, frequência…) com abas: Informações gerais/anamnese · Avaliações · Plano de intervenção · Sessões e evolução · Documentos |
 | **Avaliações** | Objetivo, hipóteses, instrumentos (Planejado → Aplicado → Corrigido → No relatório), checklist, datas, anotações. **Plano de avaliação por IA** (instrumentos, ordem, nº de sessões, justificativa, objetivos por sessão) — tudo editável. Em cada instrumento: **roteiro de aplicação** e **registro clínico** com sugestão da IA, revisados antes de salvar no prontuário |
 | **Evolução quantitativa** | Pontuações de cada aplicação (inicial, intermediária, reavaliação) em gráfico e tabela com variação e leitura de melhora/piora conforme o sentido de cada medida |
+| **Intervenção por área** | O plano é dividido em áreas (Consciência fonológica, Alfabetização, Leitura, Escrita, Matemática, Atenção, Funções executivas, Memória, Linguagem, Motricidade, Habilidades sociais, Regulação emocional, Autonomia…). Escolhe-se a área e depois o objetivo dentro dela, a partir de um banco de objetivos (ampliável: o botão de marcador salva novos objetivos no seu banco). Sessões e registros usam o mesmo seletor área → objetivo, e o plano mostra o progresso por área |
+| **Relatório (RAN)** | Modelo baseado no RAN da profissional: identificação, queixa, histórico, antecedentes, jeito de ser, vida escolar, comportamento na avaliação, instrumentos com referências, síntese dos resultados por domínio com quadros gerados a partir dos registros de aplicação, aspectos comportamentais (escalas e observação escolar), conclusão e indicações; pré-visualização, impressão em papel timbrado e IA para redigir as seções |
+| **Importar do Drive** | Envie .docx, PDF com texto, .txt, .xlsx ou .csv (vários de uma vez). Documentos (anamnese, RAN, ficha) são lidos por rótulos e seções; planilhas têm as colunas mapeadas automaticamente. Revisão antes de salvar; pacientes com o mesmo nome são completados sem apagar dados; o arquivo original vai para Documentos e novos pacientes ganham o contrato em rascunho. IA opcional, só com consentimento (envia o texto à OpenAI) |
+| **Cobranças com aprovação** | Pelas datas de vencimento do Financeiro, o sistema prepara lembretes (antes), aviso no dia e cobranças em atraso para WhatsApp e e-mail dos responsáveis. **Nada é enviado sem aprovação**: a tela Cobranças mostra a fila para editar, aprovar ou rejeitar. Pagamento registrado cancela o que estava pendente. Regras e textos em Configurações › Cobranças |
 | **Objetivos e atividades por sessão** | Avaliação e intervenção: vários objetivos (sem limite) e várias atividades por sessão, cada atividade com materiais e tempo; atividades inseridas da biblioteca; resultado por objetivo (atingido / parcial / não atingido) no registro da sessão, levado automaticamente ao plano. IA sugere de 3 a 5 objetivos e de 2 a 4 atividades por sessão |
 | **Anexos** | Em cada avaliação, sessão do plano e registro de sessão; todos aparecem também na aba Documentos do paciente |
 | **Tarefas da clínica** | Lista com prioridade (urgente/alta/média/baixa), categoria, prazo, repetição e paciente; rotina de gestão sugerida (inclui prazos do contrato: reunião semestral, revisão do plano, reajuste IGPM em julho); pendências detectadas automaticamente (atrasos, contratos, sessões sem registro, confirmações, correções, revisões); destaque no Início |
@@ -116,6 +123,14 @@ npx netlify-cli deploy --build --prod
 ```
 
 **Segurança no site publicado:** sem Supabase configurado o site abre em modo demonstração para qualquer visitante; nesse caso a IA real e as métricas reais do Instagram ficam **desligadas** de propósito (para ninguém usar sua chave). Configure o Supabase antes de usar com pacientes.
+
+## Cobranças: envio automático após aprovação
+
+Sem configuração, ao aprovar uma mensagem o sistema **abre o WhatsApp ou o seu e-mail com o texto pronto** (envio assistido, 1 clique). Para envio automático após a aprovação:
+- **E-mail:** crie uma conta no Resend, verifique o domínio do remetente e defina `RESEND_API_KEY` e `EMAIL_FROM` (ex.: `Larissa Bueno <cobranca@seudominio.com.br>`).
+- **WhatsApp:** a Meta só permite mensagens iniciadas pela empresa com **modelos aprovados** pela API oficial (WhatsApp Cloud API). Crie um modelo de utilidade com 4 variáveis (responsável, paciente, valor, vencimento) e defina `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_TEMPLATE`. Nesse modo é enviado o texto do modelo aprovado (não o texto editado na tela).
+
+As mensagens são preparadas quando você abre o sistema (não há servidor rodando sozinho de madrugada). Confira as regras e custos atuais do Resend e da Meta.
 
 ## Conectar o Instagram (métricas)
 

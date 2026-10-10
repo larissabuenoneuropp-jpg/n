@@ -1,5 +1,5 @@
 // Tarefas de gestão da clínica: rotina sugerida e pendências detectadas automaticamente.
-import type { Appointment, Assessment, ClinicTask, InterventionPlan, Patient, Profile, Receipt, Report, SessionRecord, TaskPriority, Transaction } from "@/lib/types";
+import type { Appointment, Assessment, ChargeMessage, ClinicTask, InterventionPlan, Patient, Profile, Receipt, Report, SessionRecord, TaskPriority, Transaction } from "@/lib/types";
 import { addDays, monthKey, parseDate, toISODate } from "@/lib/utils";
 import { missingContractFields } from "@/lib/documents";
 
@@ -64,11 +64,16 @@ export interface AutoPending {
 export function detectPending(d: {
   patients: Patient[]; transactions: Transaction[]; appointments: Appointment[]; sessions: SessionRecord[];
   assessments: Assessment[]; plans: InterventionPlan[]; reports: Report[]; receipts: Receipt[]; profile: Profile | null;
+  charges?: ChargeMessage[];
 }): AutoPending[] {
   const out: AutoPending[] = [];
   const today = toISODate(new Date());
   const name = (id?: string | null) => d.patients.find((p) => p.id === id)?.name ?? "";
   const active = d.patients.filter((p) => p.status === "ativo");
+
+  // Cobranças aguardando aprovação
+  const toApprove = (d.charges ?? []).filter((m) => m.status === "pendente").length;
+  if (toApprove) out.push({ key: "aprovar-cobrancas", title: `Aprovar ${toApprove} mensagem(ns) de cobrança`, description: "Mensagens de WhatsApp/e-mail preparadas pelas datas de vencimento. Só são enviadas depois da sua aprovação.", priority: "urgente", category: "Financeiro", href: "/cobrancas" });
 
   // Financeiro: atrasos
   const overdue = d.transactions.filter((t) => t.type === "receita" && !t.paid_at && t.due_date < today);

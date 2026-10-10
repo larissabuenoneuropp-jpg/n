@@ -7,6 +7,7 @@ import { formatDate, money } from "@/lib/utils";
 
 const ANAMNESIS_FIELDS: Array<{ key: keyof Anamnesis; label: string }> = [
   { key: "complaints", label: "Queixas principais" },
+  { key: "personality", label: "Jeito de ser da criança, segundo a família" },
   { key: "history", label: "Histórico do paciente (gestação, parto, desenvolvimento)" },
   { key: "development", label: "Desenvolvimento neuropsicomotor e linguagem" },
   { key: "school_history", label: "Histórico escolar" },

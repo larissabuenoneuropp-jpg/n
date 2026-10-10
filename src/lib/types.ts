@@ -28,6 +28,8 @@ export interface Address {
 }
 
 export interface Anamnesis {
+  /** "Jeito de ser da criança, segundo a família" (RAN, seção 5). */
+  personality?: string;
   history?: string;
   complaints?: string;
   development?: string;
@@ -60,6 +62,7 @@ export interface Patient extends Base {
   /** Valor da sessão de avaliação. */
   assessment_value?: number;
   weekly_frequency?: number;
+  handedness?: "destro" | "canhoto" | "ambidestro" | null;
   /** Endereço do responsável contratante (usado no contrato e no recibo). */
   address?: Address;
   start_date?: string | null;
@@ -98,6 +101,15 @@ export interface SessionObjective {
   id: ID;
   text: string;
   status?: ObjectiveStatus | null;
+  /** Área da intervenção a que o objetivo pertence (ex.: "Consciência fonológica"). */
+  area?: string;
+}
+
+/** Área de intervenção do plano com seus objetivos específicos. */
+export interface PlanArea {
+  id: ID;
+  area: string;
+  objectives: TextItem[];
 }
 
 /** Atividade de uma sessão (várias por sessão). */
@@ -169,6 +181,9 @@ export interface InterventionPlan extends Base {
   assessment_id?: ID | null;
   title: string;
   general_objective?: string;
+  /** Objetivos específicos organizados por área (fonte principal). */
+  areas?: PlanArea[];
+  /** Lista plana legada ("Área: objetivo"), mantida em sincronia com `areas`. */
   specific_objectives: TextItem[];
   goals: TextItem[];
   progress_criteria?: string;
@@ -314,6 +329,42 @@ export interface Profile {
   instagram?: string;
   city?: string;
   state?: string;
+  /** Objetivos personalizados adicionados ao banco, por área. */
+  objective_bank?: Record<string, string[]>;
+  billing_rules?: BillingRules;
+}
+
+/** Regras de cobrança automática (as mensagens sempre aguardam aprovação antes do envio). */
+export interface BillingRules {
+  enabled: boolean;
+  /** Lembrete X dias antes do vencimento (0 = não enviar). */
+  days_before: number;
+  on_due: boolean;
+  /** Cobranças após o vencimento, em dias (ex.: [3, 7, 15]). */
+  days_after: number[];
+  whatsapp: boolean;
+  email: boolean;
+}
+
+export type ChargeStage = "lembrete" | "vencimento" | `atraso_${number}`;
+export type ChargeStatus = "pendente" | "enviada" | "rejeitada" | "cancelada" | "falhou";
+
+/** Mensagem de cobrança na fila de aprovação. */
+export interface ChargeMessage extends Base {
+  transaction_id: ID;
+  patient_id?: ID | null;
+  channel: "whatsapp" | "email";
+  stage: ChargeStage;
+  recipient: string;
+  recipient_name?: string;
+  subject?: string;
+  body: string;
+  status: ChargeStatus;
+  amount: number;
+  due_date: string;
+  approved_at?: string | null;
+  sent_at?: string | null;
+  error?: string | null;
 }
 
 /** Recibo de pagamento gerado automaticamente quando uma receita é marcada como paga. */
@@ -356,6 +407,10 @@ export interface Instrument extends Base {
   full_name: string;
   area: string;
   evaluates: string;
+  /** Referência bibliográfica (lista de instrumentos do relatório). */
+  reference?: string;
+  /** Seção do RAN onde os resultados aparecem, ex.: "Funções executivas › Atenção". */
+  ran_domain?: string;
   age_range?: string;
   access: InstrumentAccess;
   access_note?: string;
@@ -458,6 +513,7 @@ export interface TableMap {
   receipts: Receipt;
   tasks: ClinicTask;
   social_posts: SocialPost;
+  charge_messages: ChargeMessage;
 }
 
 export type TableName = keyof TableMap;

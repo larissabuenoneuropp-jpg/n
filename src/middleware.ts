@@ -1,11 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config";
+import { isSetupRequired, isSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 
 const PUBLIC_PATHS = ["/login", "/auth"];
 
 export async function middleware(request: NextRequest) {
-  // Modo demonstração: sem autenticação.
+  const path0 = request.nextUrl.pathname;
+  // Produção sem Supabase: nada fica acessível até configurar o login (exceto a tela que explica isso).
+  if (isSetupRequired) {
+    if (path0.startsWith("/login")) return NextResponse.next();
+    if (path0.startsWith("/api")) return NextResponse.json({ error: "Login não configurado" }, { status: 503 });
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+  // Modo demonstração explícito: sem autenticação.
   if (!isSupabaseConfigured) return NextResponse.next();
 
   let response = NextResponse.next({ request });
@@ -30,6 +40,16 @@ export async function middleware(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
   const isApi = path.startsWith("/api");
 
+  // Só entra quem confirmou o e-mail (garante que o e-mail é válido e pertence à pessoa)
+  if (user && !user.email_confirmed_at && !isPublic) {
+    await supabase.auth.signOut();
+    if (isApi) return NextResponse.json({ error: "Confirme seu e-mail" }, { status: 401 });
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "?reason=confirm";
+    return NextResponse.redirect(url);
+  }
+
   if (!user && !isPublic) {
     if (isApi) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     const url = request.nextUrl.clone();
@@ -37,7 +57,7 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set("next", path);
     return NextResponse.redirect(url);
   }
-  if (user && path === "/login") {
+  if (user && user.email_confirmed_at && path === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

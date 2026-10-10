@@ -142,6 +142,10 @@ export function PatientForm({
           <Field label="Escola"><Input value={f.school ?? ""} onChange={(e) => set("school", e.target.value)} /></Field>
           <Field label="Ano/Série"><Input value={f.grade ?? ""} onChange={(e) => set("grade", e.target.value)} /></Field>
           <Field label="Professor(a)"><Input value={f.teacher ?? ""} onChange={(e) => set("teacher", e.target.value)} /></Field>
+          <Field label="Dominância manual">
+            <Select value={f.handedness ?? ""} onChange={(e) => set("handedness", (e.target.value || null) as Patient["handedness"])} placeholder="—"
+              options={[{ value: "destro", label: "Destro" }, { value: "canhoto", label: "Canhoto" }, { value: "ambidestro", label: "Ambidestro" }]} />
+          </Field>
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2">

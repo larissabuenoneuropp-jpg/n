@@ -1,5 +1,5 @@
 "use client";
-import type { AuditLog, Profile, TableMap, TableName } from "@/lib/types";
+import type { AuditLog, Instrument, Profile, TableMap, TableName } from "@/lib/types";
 import { uid } from "@/lib/utils";
 import type { DataStore, ListOptions } from "./store";
 import { buildSeed } from "./seed";
@@ -7,7 +7,7 @@ import { buildSeed } from "./seed";
 const PREFIX = "np:demo:";
 const TABLES: TableName[] = [
   "patients", "assessments", "intervention_plans", "appointments", "session_records",
-  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts",
+  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts", "charge_messages",
 ];
 
 function read<T>(key: string, fallback: T): T {
@@ -62,6 +62,23 @@ export class DemoStore implements DataStore {
     if (typeof window !== "undefined" && !read("seeded_v5", false)) {
       if (read<unknown[]>("social_posts", []).length === 0) write("social_posts", buildSeed().social_posts);
       write("seeded_v5", true);
+    }
+    // v6: instrumentos do modelo RAN e campos de referência/seção
+    if (typeof window !== "undefined" && !read("seeded_v6", false)) {
+      const rows = read<Instrument[]>("instruments", []);
+      const byName = new Map(rows.map((r) => [r.name.toLowerCase(), r]));
+      const fresh = buildSeed().instruments;
+      const merged = rows.map((r) => {
+        const lib = fresh.find((f) => f.name.toLowerCase() === r.name.toLowerCase());
+        return lib ? { ...r, reference: r.reference || lib.reference, ran_domain: r.ran_domain || lib.ran_domain, record_fields: r.name === "TAC" || r.name === "Trilhas" ? lib.record_fields : r.record_fields } : r;
+      });
+      write("instruments", [...merged, ...fresh.filter((f) => !byName.has(f.name.toLowerCase()))]);
+      write("seeded_v6", true);
+    }
+    // v7: fila de cobranças
+    if (typeof window !== "undefined" && !read("seeded_v7", false)) {
+      if (!localStorage.getItem(PREFIX + "charge_messages")) write("charge_messages", []);
+      write("seeded_v7", true);
     }
   }
 

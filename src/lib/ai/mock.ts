@@ -40,16 +40,19 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
       return {
         title: "Plano de intervenção individualizado",
         general_objective: "Promover o desenvolvimento das habilidades de leitura, escrita e funções cognitivas associadas.",
-        specific_objectives: ["Ampliar consciência fonológica.", "Consolidar correspondência grafema-fonema.", "Aumentar fluência e compreensão leitora."],
+        areas: [
+          { area: "Consciência fonológica", objectives: ["Identificar rimas em pares de palavras", "Segmentar palavras em sílabas", "Identificar o fonema inicial e final de palavras"] },
+          { area: "Alfabetização", objectives: ["Estabelecer correspondência grafema-fonema", "Combinar letras para formar sílabas simples (CV)"] },
+          { area: "Atenção", objectives: ["Manter a atenção sustentada na tarefa por tempo progressivamente maior", "Concluir as tarefas iniciadas"] },
+        ],
         goals: ["Identificar rimas com 80% de acerto em 4 semanas.", "Ler palavras regulares com 90% de precisão em 8 semanas."],
         progress_criteria: "Desempenho registrado em cada sessão, escalas de progresso (1–5) e reavaliação trimestral.",
         sessions: Array.from({ length: n }, (_, i) => ({
           number: i + 1,
           objectives: [
-            themes[i % themes.length],
-            "Manter a atenção na tarefa por pelo menos 10 minutos",
-            "Realizar a atividade principal com apoio mínimo",
-            "Verbalizar a estratégia utilizada",
+            { area: i % 2 ? "Alfabetização" : "Consciência fonológica", text: i % 2 ? "Estabelecer correspondência grafema-fonema" : ["Identificar rimas em pares de palavras", "Segmentar palavras em sílabas", "Identificar o fonema inicial e final de palavras"][i % 3] },
+            { area: "Alfabetização", text: "Combinar letras para formar sílabas simples (CV)" },
+            { area: "Atenção", text: "Manter a atenção sustentada na tarefa por tempo progressivamente maior" },
           ],
           activities: [
             { title: "Aquecimento lúdico", materials: "Jogo de cartas", duration_min: 5 },
@@ -108,10 +111,10 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
     case "plan_session":
       return {
         objectives: [
-          ...((input.objetivos_atuais as string[] | undefined) ?? []),
-          "Identificar o som inicial de palavras com apoio visual",
-          "Manter a atenção na tarefa por 10 minutos",
-          "Realizar a atividade com no máximo 2 pistas",
+          ...((input.objetivos_atuais as Array<{ area?: string; text: string }> | undefined) ?? []),
+          { area: "Consciência fonológica", text: "Identificar o fonema inicial e final de palavras" },
+          { area: "Atenção", text: "Manter a atenção sustentada na tarefa por tempo progressivamente maior" },
+          { area: "Funções executivas", text: "Monitorar e corrigir os próprios erros (automonitoramento)" },
         ],
         activities: [
           { title: "Aquecimento lúdico", materials: "Jogo de cartas", duration_min: 5 },
@@ -154,6 +157,9 @@ export function mockResponse(task: AiTask, input: Record<string, unknown>): Reco
         privacy_notes: "Exemplo fictício; nenhum dado de paciente utilizado.",
       };
     }
+    case "import_extract":
+      // Sem chave da OpenAI: a extração fica só com as regras locais
+      return {};
     case "chat":
       return { answer: "[MODO DEMONSTRAÇÃO] Configure OPENAI_API_KEY para conversar com a assistente clínica." };
   }

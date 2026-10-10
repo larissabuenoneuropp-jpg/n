@@ -101,22 +101,22 @@ export function buildSeed() {
   ];
 
   const plan1 = uid();
-  type SeedSession = { objs: string[]; acts: Array<[string, number, string]>; res?: Array<"atingido" | "parcial" | "nao_atingido"> };
+  type SeedSession = { objs: Array<[string, string]>; acts: Array<[string, number, string]>; res?: Array<"atingido" | "parcial" | "nao_atingido"> };
   const seedSessions: SeedSession[] = [
-    { objs: ["Identificar rimas em pares de palavras", "Segmentar palavras em sílabas", "Contar sílabas de palavras de 2 a 4 sílabas"],
+    { objs: [["Consciência fonológica", "Identificar rimas em pares de palavras"], ["Consciência fonológica", "Segmentar palavras em sílabas"], ["Atenção", "Manter a atenção sustentada na tarefa por tempo progressivamente maior"]],
       acts: [["Caça-rimas com figuras", 15, "Cartões ilustrados"], ["Segmentação silábica com palmas", 10, "Fichas de palavras, tampinhas"], ["Jogo da memória de rimas", 15, "Pares de cartas"]], res: ["atingido", "atingido", "parcial"] },
-    { objs: ["Discriminar os sons /p/ e /b/", "Associar som inicial à letra", "Ler sílabas simples com p e b"],
+    { objs: [["Escrita e ortografia", "Reduzir trocas de grafemas com sons semelhantes (p/b, t/d, f/v)"], ["Alfabetização", "Estabelecer correspondência grafema-fonema"], ["Alfabetização", "Combinar letras para formar sílabas simples (CV)"]],
       acts: [["Bingo de fonemas (p/b)", 20, "Cartelas, marcadores"], ["Leitura de sílabas no alfabeto móvel", 15, "Alfabeto móvel"]], res: ["atingido", "parcial", "parcial"] },
-    { objs: ["Ler palavras regulares com apoio", "Usar régua de leitura de forma autônoma", "Responder 2 perguntas literais sobre o texto"],
+    { objs: [["Leitura e compreensão", "Ler palavras regulares com precisão"], ["Leitura e compreensão", "Aumentar a fluência leitora"], ["Leitura e compreensão", "Responder perguntas literais sobre o texto"]],
       acts: [["Leitura compartilhada com pistas visuais", 20, "Texto curto, régua colorida"], ["Mapa da história", 15, "Folha A3, canetas"]] },
-    { objs: ["Escrever palavras com f e v", "Revisar a própria escrita com checklist", "Reduzir trocas f/v na escrita espontânea"],
+    { objs: [["Escrita e ortografia", "Escrever palavras sob ditado com correspondência adequada"], ["Escrita e ortografia", "Revisar a própria escrita com apoio de checklist"], ["Atenção", "Concluir as tarefas iniciadas"]],
       acts: [["Ditado mudo com imagens", 15, "Folha com figuras"], ["Traçado em bandeja sensorial (f/v)", 10, "Bandeja com sal"], ["Produção de frases", 15, "Cartões de frases"]] },
   ];
   const schedule = seedSessions.map((ss, i) => {
-    const objectives = ss.objs.map((text, j) => ({ id: uid(), text, status: ss.res?.[j] ?? null }));
+    const objectives = ss.objs.map(([area, text], j) => ({ id: uid(), area, text, status: ss.res?.[j] ?? null }));
     const activity_list = ss.acts.map(([title, duration_min, materials]) => ({ id: uid(), title, duration_min, materials, done: Boolean(ss.res) }));
     return {
-      id: uid(), number: i + 1, objective: ss.objs.join("; "), activities: ss.acts.map((a) => a[0]).join("\n"), objectives, activity_list, attachments: [],
+      id: uid(), number: i + 1, objective: ss.objs.map((o) => o[1]).join("; "), activities: ss.acts.map((a) => a[0]).join("\n"), objectives, activity_list, attachments: [],
       materials: "Cartões, alfabeto móvel, textos curtos", duration_min: 45,
       strategies: "Instrução explícita, modelagem, reforço positivo, apoio multissensorial",
       success_criteria: "Acertar ao menos 80% dos itens com apoio mínimo", done: i < 2, record: i < 2 ? "Realizada" : "",
@@ -126,10 +126,17 @@ export function buildSeed() {
     {
       id: plan1, patient_id: p1, title: "Plano de intervenção — leitura e escrita", status: "ativo", start_date: yearsAgo(0, 3),
       general_objective: "Desenvolver habilidades de leitura e escrita compatíveis com o ano escolar.",
+      areas: [
+        { id: uid(), area: "Consciência fonológica", objectives: [{ id: uid(), text: "Identificar rimas em pares de palavras" }, { id: uid(), text: "Segmentar palavras em sílabas" }] },
+        { id: uid(), area: "Alfabetização", objectives: [{ id: uid(), text: "Estabelecer correspondência grafema-fonema" }, { id: uid(), text: "Combinar letras para formar sílabas simples (CV)" }] },
+        { id: uid(), area: "Leitura e compreensão", objectives: [{ id: uid(), text: "Ler palavras regulares com precisão" }, { id: uid(), text: "Aumentar a fluência leitora" }] },
+        { id: uid(), area: "Escrita e ortografia", objectives: [{ id: uid(), text: "Reduzir trocas de grafemas com sons semelhantes (p/b, t/d, f/v)" }] },
+        { id: uid(), area: "Atenção", objectives: [{ id: uid(), text: "Manter a atenção sustentada na tarefa por tempo progressivamente maior" }] },
+      ],
       specific_objectives: [
-        { id: uid(), text: "Ampliar consciência fonológica (nível silábico e fonêmico)." },
-        { id: uid(), text: "Reduzir trocas de pares surdos/sonoros na escrita." },
-        { id: uid(), text: "Aumentar a fluência leitora." },
+        { id: uid(), text: "Consciência fonológica: Identificar rimas em pares de palavras" },
+        { id: uid(), text: "Alfabetização: Estabelecer correspondência grafema-fonema" },
+        { id: uid(), text: "Leitura e compreensão: Aumentar a fluência leitora" },
       ],
       goals: [{ id: uid(), text: "Ler 60 palavras por minuto em texto do nível até o fim do semestre." }],
       progress_criteria: "Registros de sessão, escalas de progresso e reavaliação a cada 3 meses.", schedule,
@@ -282,6 +289,6 @@ export function buildSeed() {
 
   return {
     patients, assessments, intervention_plans: plans, appointments, session_records: sessions,
-    activities, documents: [], transactions, reports, profile, instruments, assessment_records, receipts, tasks, social_posts,
+    activities, documents: [], transactions, reports, profile, instruments, assessment_records, receipts, tasks, social_posts, charge_messages: [] as import("@/lib/types").ChargeMessage[],
   };
 }

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button, Field, Input, Modal, Select, Textarea } from "@/components/ui";
-import { ACCESS_LABEL, DEFAULT_RECORD_FIELDS, INSTRUMENT_AREAS } from "@/lib/data/instruments-library";
+import { ACCESS_LABEL, DEFAULT_RECORD_FIELDS, INSTRUMENT_AREAS, RAN_DOMAINS } from "@/lib/data/instruments-library";
 import type { Instrument, RecordField } from "@/lib/types";
 
 const blank: Partial<Instrument> = {
@@ -54,6 +54,12 @@ export function InstrumentForm({ open, onClose, initial, onSave }: {
         </Field>
         <Field label="O que avalia" className="sm:col-span-2"><Textarea value={f.evaluates ?? ""} onChange={(e) => setF({ ...f, evaluates: e.target.value })} /></Field>
         <Field label="Observação sobre o uso" className="sm:col-span-2"><Textarea value={f.access_note ?? ""} onChange={(e) => setF({ ...f, access_note: e.target.value })} /></Field>
+        <Field label="Seção no relatório (RAN)" className="sm:col-span-2">
+          <Select value={f.ran_domain ?? ""} onChange={(e) => setF({ ...f, ran_domain: e.target.value })} placeholder="—" options={RAN_DOMAINS} />
+        </Field>
+        <Field label="Referência bibliográfica (aparece na lista de instrumentos do relatório)" className="sm:col-span-2">
+          <Textarea rows={2} value={f.reference ?? ""} onChange={(e) => setF({ ...f, reference: e.target.value })} />
+        </Field>
         <Field label="Roteiro base de aplicação (seu modelo)" className="sm:col-span-4" hint="Usado como ponto de partida na aplicação. Não copie itens protegidos do manual.">
           <Textarea rows={5} value={f.application_guide ?? ""} onChange={(e) => setF({ ...f, application_guide: e.target.value })} />
         </Field>

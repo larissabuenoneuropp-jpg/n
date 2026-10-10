@@ -9,6 +9,7 @@ import {
 import { LineChart } from "@/components/charts";
 import { useCollection, useData } from "@/lib/data/provider";
 import { ActivitiesEditor, AttachmentsField, ObjectivesEditor } from "@/components/sessions/editors";
+import { areasOf, buildAreaOptions, objectiveBank } from "@/lib/objective-bank";
 import { activitiesOf, activitiesText, OBJECTIVE_STATUS, objectiveSummary, objectivesOf, objectivesText, withActivities, withObjectives } from "@/lib/sessions";
 import { askAI, patientContext } from "@/lib/ai/client";
 import type { Patient, PlannedSession, ProgressScales, SessionInsights, SessionRecord } from "@/lib/types";
@@ -68,10 +69,11 @@ function SessionForm({ patient, open, onClose, initial, appointmentId, onSaved }
   patient: Patient; open: boolean; onClose: () => void; initial?: SessionRecord | null; appointmentId?: string | null;
   onSaved: (r: SessionRecord) => void;
 }) {
-  const { store, bump } = useData();
+  const { store, bump, profile } = useData();
   const toast = useToast();
   const plans = useCollection("intervention_plans", { filter: { patient_id: patient.id } });
   const [f, setF] = useState<Partial<SessionRecord>>({});
+  const linkedPlan = plans.data.find((p) => p.id === f.plan_id);
   const [saving, setSaving] = useState(false);
   const [withAi, setWithAi] = useState(true);
 
@@ -178,7 +180,8 @@ function SessionForm({ patient, open, onClose, initial, appointmentId, onSaved }
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <p className="mb-1.5 text-xs font-medium text-ink-soft">Objetivos da sessão — resultado de cada um</p>
-            <ObjectivesEditor value={f.objective_results ?? []} onChange={(v) => setF({ ...f, objective_results: v })} withStatus />
+            <ObjectivesEditor value={f.objective_results ?? []} onChange={(v) => setF({ ...f, objective_results: v })} withStatus
+              areaOptions={buildAreaOptions(linkedPlan ? areasOf(linkedPlan) : [], objectiveBank(profile))} />
           </div>
           <div>
             <p className="mb-1.5 text-xs font-medium text-ink-soft">Atividades realizadas</p>

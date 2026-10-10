@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { BookOpen, Check, GripVertical, Paperclip, Plus, Trash2, X } from "lucide-react";
+import { BookOpen, Check, Paperclip, Plus, Trash2, X } from "lucide-react";
 import { Button, Input, Select, useToast } from "@/components/ui";
 import { useCollection, useData } from "@/lib/data/provider";
 import { OBJECTIVE_STATUS } from "@/lib/sessions";
@@ -9,60 +9,95 @@ import { cn, uid } from "@/lib/utils";
 
 /* ------------------------------- Objetivos -------------------------------- */
 
-/** Lista de objetivos da sessão (sem limite). Com `withStatus`, permite marcar o resultado de cada um. */
-export function ObjectivesEditor({ value, onChange, withStatus, placeholder = "Novo objetivo da sessão" }: {
-  value: SessionObjective[]; onChange: (v: SessionObjective[]) => void; withStatus?: boolean; placeholder?: string;
+export interface AreaOption {
+  area: string;
+  objectives: string[];
+  /** Áreas do plano aparecem primeiro e destacadas. */
+  fromPlan?: boolean;
+}
+
+/**
+ * Lista de objetivos da sessão (sem limite), organizada por área.
+ * Para adicionar: escolha a área e depois o objetivo daquela área (ou escreva um novo).
+ * Com `withStatus`, permite marcar o resultado de cada objetivo.
+ */
+export function ObjectivesEditor({ value, onChange, withStatus, areaOptions = [] }: {
+  value: SessionObjective[]; onChange: (v: SessionObjective[]) => void; withStatus?: boolean; placeholder?: string; areaOptions?: AreaOption[];
 }) {
-  const [draft, setDraft] = useState("");
+  const [area, setArea] = useState("");
+  const [choice, setChoice] = useState("");
+  const [custom, setCustom] = useState("");
+  const current = areaOptions.find((a) => a.area === area);
+  const already = new Set(value.filter((o) => (o.area ?? "") === area).map((o) => o.text));
+  const available = (current?.objectives ?? []).filter((t) => !already.has(t));
+
   const add = () => {
-    if (!draft.trim()) return;
-    onChange([...value, { id: uid(), text: draft.trim() }]);
-    setDraft("");
+    const text = choice === "__outro" || !current ? custom.trim() : choice;
+    if (!text) return;
+    onChange([...value, { id: uid(), text, ...(area ? { area } : {}) }]);
+    setChoice("");
+    setCustom("");
   };
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= value.length) return;
-    const next = [...value];
-    [next[i], next[j]] = [next[j], next[i]];
-    onChange(next);
-  };
+
+  // Exibe agrupado por área, mantendo os índices originais para edição
+  const groups = new Map<string, Array<{ o: SessionObjective; i: number }>>();
+  value.forEach((o, i) => { const k = o.area || ""; groups.set(k, [...(groups.get(k) ?? []), { o, i }]); });
+
   return (
-    <div className="space-y-2">
-      {value.map((o, i) => (
-        <div key={o.id} className="flex items-center gap-2">
-          <button type="button" className="hidden text-ink-faint hover:text-ink sm:block" title="Mover para cima" onClick={() => move(i, -1)} aria-label="Mover para cima">
-            <GripVertical className="h-4 w-4" />
-          </button>
-          <span className="w-5 shrink-0 text-right text-xs font-medium text-ink-faint">{i + 1}.</span>
-          <Input value={o.text} onChange={(e) => onChange(value.map((x) => (x.id === o.id ? { ...x, text: e.target.value } : x)))} />
-          {withStatus && (
-            <div className="flex shrink-0 gap-1">
-              {(Object.keys(OBJECTIVE_STATUS) as ObjectiveStatus[]).map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  title={OBJECTIVE_STATUS[st].label}
-                  onClick={() => onChange(value.map((x) => (x.id === o.id ? { ...x, status: x.status === st ? null : st } : x)))}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-[11px] font-medium transition",
-                    o.status === st
-                      ? st === "atingido" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : st === "parcial" ? "border-amber-300 bg-amber-50 text-amber-700" : "border-red-300 bg-red-50 text-red-600"
-                      : "border-line text-ink-faint hover:text-ink",
-                  )}
-                >
-                  {st === "atingido" ? "Sim" : st === "parcial" ? "Parcial" : "Não"}
-                </button>
-              ))}
+    <div className="space-y-3">
+      {Array.from(groups).map(([g, items]) => (
+        <div key={g || "sem-area"} className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-700">{g || "Sem área definida"}</p>
+          {items.map(({ o, i }) => (
+            <div key={o.id} className="flex items-center gap-2">
+              <span className="w-5 shrink-0 text-right text-xs font-medium text-ink-faint">{i + 1}.</span>
+              <Input value={o.text} onChange={(e) => onChange(value.map((x) => (x.id === o.id ? { ...x, text: e.target.value } : x)))} />
+              {withStatus && (
+                <div className="flex shrink-0 gap-1">
+                  {(Object.keys(OBJECTIVE_STATUS) as ObjectiveStatus[]).map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      title={OBJECTIVE_STATUS[st].label}
+                      onClick={() => onChange(value.map((x) => (x.id === o.id ? { ...x, status: x.status === st ? null : st } : x)))}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-[11px] font-medium transition",
+                        o.status === st
+                          ? st === "atingido" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : st === "parcial" ? "border-amber-300 bg-amber-50 text-amber-700" : "border-red-300 bg-red-50 text-red-600"
+                          : "border-line text-ink-faint hover:text-ink",
+                      )}
+                    >
+                      {st === "atingido" ? "Sim" : st === "parcial" ? "Parcial" : "Não"}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0" onClick={() => onChange(value.filter((x) => x.id !== o.id))} aria-label="Remover objetivo">
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-          <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0" onClick={() => onChange(value.filter((x) => x.id !== o.id))} aria-label="Remover objetivo">
-            <X className="h-4 w-4" />
-          </Button>
+          ))}
         </div>
       ))}
-      <div className="flex gap-2">
-        <Input value={draft} placeholder={placeholder} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
-        <Button type="button" variant="secondary" size="sm" className="h-9 shrink-0" onClick={add}><Plus className="h-4 w-4" /> Objetivo</Button>
+
+      <div className="rounded-lg border border-dashed border-line p-2">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto]">
+          <Select value={area} onChange={(e) => { setArea(e.target.value); setChoice(""); }} placeholder="1. Área…"
+            options={areaOptions.map((a) => ({ value: a.area, label: `${a.fromPlan ? "★ " : ""}${a.area}` }))} />
+          {current ? (
+            <Select value={choice} onChange={(e) => setChoice(e.target.value)} placeholder="2. Objetivo da área…"
+              options={[...available.map((t) => ({ value: t, label: t })), { value: "__outro", label: "Escrever outro objetivo…" }]} />
+          ) : (
+            <Input placeholder={area ? "Objetivo" : "Escolha a área ou escreva o objetivo"} value={custom} onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+          )}
+          <Button type="button" variant="secondary" size="sm" className="h-9" onClick={add}><Plus className="h-4 w-4" /> Objetivo</Button>
+        </div>
+        {current && choice === "__outro" && (
+          <Input className="mt-2" placeholder={`Novo objetivo em ${area}`} value={custom} onChange={(e) => setCustom(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        )}
+        {areaOptions.some((a) => a.fromPlan) && <p className="mt-1.5 text-[11px] text-ink-faint">★ áreas do plano de intervenção</p>}
       </div>
       {withStatus && value.length > 0 && <p className="text-[11px] text-ink-faint">Marque o resultado de cada objetivo: Sim (atingido), Parcial ou Não.</p>}
     </div>

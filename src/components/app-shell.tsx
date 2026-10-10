@@ -3,12 +3,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  BookOpen, CalendarDays, ClipboardCheck, ListChecks, Megaphone, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
+  BellRing, BookOpen, CalendarDays, ClipboardCheck, ListChecks, Megaphone, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Avatar } from "./ui";
 import { cn } from "@/lib/utils";
-import { useData } from "@/lib/data/provider";
+import { useCollection, useData } from "@/lib/data/provider";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 
@@ -22,6 +22,7 @@ export const NAV = [
   { href: "/documentos", label: "Documentos", icon: FolderOpen },
   { href: "/relatorios", label: "Relatórios", icon: FileText },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/cobrancas", label: "Cobranças", icon: BellRing },
   { href: "/instagram", label: "Instagram", icon: Megaphone },
   { href: "/assistente", label: "Assistente IA", icon: Sparkles },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
@@ -61,6 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { profile, store } = useData();
   const [open, setOpen] = useState(false);
+  const charges = useCollection("charge_messages");
+  const toApprove = charges.data.filter((m) => m.status === "pendente").length;
   useIdleLogout();
   useEffect(() => setOpen(false), [pathname]);
 
@@ -79,6 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <Icon className={cn("h-4 w-4", active(href) ? "text-brand-600" : "")} />
           {label}
+          {href === "/cobrancas" && toApprove > 0 && <span className="ml-auto rounded-full bg-brand-600 px-1.5 text-[10px] font-semibold text-white">{toApprove}</span>}
         </Link>
       ))}
     </nav>

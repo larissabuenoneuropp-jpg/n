@@ -9,6 +9,7 @@ import { DemoStore } from "./demo-store";
 import { ACTIVITY_LIBRARY } from "./activities-library";
 import { INSTRUMENT_LIBRARY } from "./instruments-library";
 import { ensureReceipt } from "@/lib/documents";
+import { generateChargeQueue } from "@/lib/billing";
 
 interface Ctx {
   store: DataStore;
@@ -44,13 +45,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       store.list("activities").then((rows) => {
         if (rows.length === 0) store.insertMany("activities", ACTIVITY_LIBRARY.map((a) => ({ ...a, favorite: false })));
       }).catch(() => {});
-      store.list("instruments").then((rows) => {
-        if (rows.length === 0) store.insertMany("instruments", INSTRUMENT_LIBRARY.map((i) => ({ ...i, favorite: false })));
+      store.list("instruments").then(async (rows) => {
+        if (rows.length === 0) return store.insertMany("instruments", INSTRUMENT_LIBRARY.map((i) => ({ ...i, favorite: false })));
+        // Atualização da biblioteca: inclui instrumentos novos e completa referência/seção do RAN
+        const byName = new Map(rows.map((r) => [r.name.toLowerCase(), r]));
+        const missing = INSTRUMENT_LIBRARY.filter((i) => !byName.has(i.name.toLowerCase()));
+        if (missing.length) await store.insertMany("instruments", missing.map((i) => ({ ...i, favorite: false })));
+        for (const lib of INSTRUMENT_LIBRARY) {
+          const row = byName.get(lib.name.toLowerCase());
+          if (row && ((!row.reference && lib.reference) || (!row.ran_domain && lib.ran_domain))) {
+            await store.update("instruments", row.id, { reference: row.reference || lib.reference, ran_domain: row.ran_domain || lib.ran_domain });
+          }
+        }
       }).catch(() => {});
     }
   }, [store, refreshProfile]);
 
   const bump = useCallback((t: TableName) => setVersion((v) => ({ ...v, [t]: (v[t] ?? 0) + 1 })), []);
+
+  // Cobranças: prepara as mensagens do dia (ficam aguardando aprovação; nada é enviado aqui)
+  const [billingChecked, setBillingChecked] = useState(false);
+  useEffect(() => {
+    if (!profile || billingChecked) return;
+    setBillingChecked(true);
+    generateChargeQueue(store, profile).then((r) => { if (r.created || r.cancelled) bump("charge_messages"); }).catch(() => {});
+  }, [profile, billingChecked, store, bump]);
 
   return (
     <DataContext.Provider value={{ store, profile, refreshProfile, version, bump }}>{children}</DataContext.Provider>

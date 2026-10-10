@@ -7,10 +7,11 @@ import {
 } from "@/components/ui";
 import { ApplyInstrumentModal, findInstrument } from "@/components/instruments/apply-instrument";
 import { EvolutionPanel } from "@/components/instruments/evolution-panel";
+import { buildAreaOptions, objectiveBank } from "@/lib/objective-bank";
 import { ActivitiesEditor, AttachmentsField, ObjectivesEditor } from "@/components/sessions/editors";
 import { activitiesOf, assessmentSessionWithObjectives, objectiveSummary, objectivesOf, toActivities, toObjectives } from "@/lib/sessions";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useCollection } from "@/lib/data/provider";
+import { useCollection, useData } from "@/lib/data/provider";
 import { askAI, patientContext } from "@/lib/ai/client";
 import { DEFAULT_CHECKLIST, INSTRUMENTS } from "@/lib/catalog";
 import { INSTRUMENT_STATUS } from "@/lib/labels";
@@ -168,6 +169,7 @@ function AssessmentSessionCard({ s, instruments, onChange, onRemove }: {
   s: AssessmentSessionPlan; instruments: string[]; onChange: (s: AssessmentSessionPlan) => void; onRemove: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { profile } = useData();
   const objectives = objectivesOf(s);
   const activities = activitiesOf({ activity_list: s.activities });
   const sum = objectiveSummary(objectives);
@@ -189,7 +191,7 @@ function AssessmentSessionCard({ s, instruments, onChange, onRemove }: {
         <div className="grid gap-4 border-t border-line p-4 lg:grid-cols-2">
           <div>
             <p className="mb-1.5 text-xs font-medium text-ink-soft">Objetivos da sessão</p>
-            <ObjectivesEditor value={objectives} onChange={(v) => onChange(assessmentSessionWithObjectives(s, v))} withStatus />
+            <ObjectivesEditor value={objectives} onChange={(v) => onChange(assessmentSessionWithObjectives(s, v))} withStatus areaOptions={buildAreaOptions([], objectiveBank(profile))} />
           </div>
           <div className="space-y-4">
             <div>

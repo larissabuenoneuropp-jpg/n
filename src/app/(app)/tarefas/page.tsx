@@ -58,6 +58,7 @@ export default function TasksPage() {
   const plans = useCollection("intervention_plans");
   const reports = useCollection("reports");
   const receipts = useCollection("receipts");
+  const charges = useCollection("charge_messages");
   const [view, setView] = useState<"prioridade" | "prazo" | "categoria">("prioridade");
   const [showDone, setShowDone] = useState(false);
   const [quick, setQuick] = useState("");
@@ -67,8 +68,8 @@ export default function TasksPage() {
   const pmap = useMemo(() => new Map(patients.data.map((p) => [p.id, p.name])), [patients.data]);
   const pending = useMemo(() => detectPending({
     patients: patients.data, transactions: transactions.data, appointments: appointments.data, sessions: sessions.data,
-    assessments: assessments.data, plans: plans.data, reports: reports.data, receipts: receipts.data, profile,
-  }), [patients.data, transactions.data, appointments.data, sessions.data, assessments.data, plans.data, reports.data, receipts.data, profile]);
+    assessments: assessments.data, plans: plans.data, reports: reports.data, receipts: receipts.data, profile, charges: charges.data,
+  }), [patients.data, transactions.data, appointments.data, sessions.data, assessments.data, plans.data, reports.data, receipts.data, profile, charges.data]);
   const trackedKeys = new Set(tasks.data.filter((t) => t.status !== "concluida" && t.source_key).map((t) => t.source_key));
   const untracked = pending.filter((p) => !trackedKeys.has(p.key));
 

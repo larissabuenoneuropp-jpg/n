@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Tarefa de IA desconhecida" }, { status: 400 });
   }
   const inputText = JSON.stringify(body.input ?? {});
-  if (inputText.length > MAX_INPUT_CHARS) {
+  if (inputText.length > (task === "import_extract" ? 60_000 : MAX_INPUT_CHARS)) {
     return NextResponse.json({ error: "Conteúdo muito longo para análise." }, { status: 413 });
   }
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "system", content: TASK_INSTRUCTIONS[task] },
-          { role: "user", content: `Dados (pseudonimizados):\n${inputText}` },
+          { role: "user", content: `${task === "import_extract" ? "Documento enviado pela profissional (com consentimento para extração)" : "Dados (pseudonimizados)"}:\n${inputText}` },
         ],
       }),
     });

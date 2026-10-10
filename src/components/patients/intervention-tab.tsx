@@ -10,13 +10,18 @@ import { useCollection } from "@/lib/data/provider";
 import { askAI, patientContext } from "@/lib/ai/client";
 import type { Assessment, InterventionPlan, Patient, PlannedSession } from "@/lib/types";
 import { ActivitiesEditor, AttachmentsField, ObjectivesEditor } from "@/components/sessions/editors";
-import { activitiesOf, objectiveSummary, objectivesOf, OBJECTIVE_STATUS, toActivities, toObjectives, withActivities, withObjectives } from "@/lib/sessions";
+import { PlanAreasEditor } from "@/components/sessions/plan-areas";
+import { areasOf, buildAreaOptions, flattenAreas, objectiveBank } from "@/lib/objective-bank";
+import { useData } from "@/lib/data/provider";
+import type { PlanArea } from "@/lib/types";
+import { activitiesOf, groupByArea, objectiveSummary, objectivesOf, OBJECTIVE_STATUS, toActivities, toObjectives, withActivities, withObjectives } from "@/lib/sessions";
 import { addDays, formatDate, parseDate, toISODate, today, uid } from "@/lib/utils";
 
 interface AiPlan {
   title: string;
   general_objective: string;
-  specific_objectives: string[];
+  areas?: Array<{ area: string; objectives: string[] }>;
+  specific_objectives?: string[];
   goals: string[];
   progress_criteria: string;
   sessions: Array<{
@@ -62,6 +67,7 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
   const [ai, setAi] = useState<AiPlan | null>(null);
   const [demo, setDemo] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { profile } = useData();
 
   useEffect(() => {
     if (open) {
@@ -75,6 +81,7 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
     try {
       const r = await askAI<AiPlan>("intervention_plan", {
         ...patientContext(patient),
+        areas_disponiveis: Object.keys(objectiveBank(profile)),
         sessions_count: count,
         foco: focus || undefined,
         avaliacao: assessment
@@ -100,13 +107,18 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
     const dates = scheduleDates(startDate, useAi && ai ? ai.sessions.length : count, patient.weekly_frequency ?? 1);
     const plan: Partial<InterventionPlan> = {
       patient_id: patient.id, assessment_id: assessment?.id ?? null, status: "ativo", start_date: startDate,
-      title: "Plano de intervenção", specific_objectives: [], goals: [],
+      title: "Plano de intervenção", specific_objectives: [], areas: [], goals: [],
       schedule: Array.from({ length: count }, (_, i) => ({ ...blankSession(i + 1), date: dates[i] })),
     };
     if (useAi && ai) {
       Object.assign(plan, {
         title: ai.title, general_objective: ai.general_objective, progress_criteria: ai.progress_criteria,
-        specific_objectives: ai.specific_objectives.map((text) => ({ id: uid(), text })),
+        ...(() => {
+          const areas: PlanArea[] = ai.areas?.length
+            ? ai.areas.map((a) => ({ id: uid(), area: a.area, objectives: (a.objectives ?? []).map((text) => ({ id: uid(), text })) }))
+            : areasOf({ specific_objectives: (ai.specific_objectives ?? []).map((text) => ({ id: uid(), text })) });
+          return { areas, specific_objectives: flattenAreas(areas) };
+        })(),
         goals: ai.goals.map((text) => ({ id: uid(), text })),
         schedule: ai.sessions.map((s, i) => sessionFromAI(s, i + 1, dates[i])),
       });
@@ -142,7 +154,18 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
           <AiNotice demo={demo} />
           <Field label="Título"><Input value={ai.title} onChange={(e) => setAi({ ...ai, title: e.target.value })} /></Field>
           <Field label="Objetivo geral"><Textarea value={ai.general_objective} onChange={(e) => setAi({ ...ai, general_objective: e.target.value })} /></Field>
-          <Field label="Objetivos específicos"><ListEditor items={ai.specific_objectives} onChange={(v) => setAi({ ...ai, specific_objectives: v })} /></Field>
+          <div>
+            <p className="mb-2 text-xs font-medium text-ink-soft">Áreas e objetivos específicos (edite tudo depois de criar)</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(ai.areas ?? []).map((a, i) => (
+                <div key={i} className="rounded-lg bg-canvas px-3 py-2 text-sm">
+                  <p className="font-display font-semibold text-brand-700">{a.area}</p>
+                  <ul className="mt-1 list-disc pl-5 text-xs text-ink-soft">{(a.objectives ?? []).map((o, j) => <li key={j}>{o}</li>)}</ul>
+                </div>
+              ))}
+              {!ai.areas?.length && (ai.specific_objectives ?? []).map((o, j) => <p key={j} className="text-xs text-ink-soft">• {o}</p>)}
+            </div>
+          </div>
           <Field label="Metas"><ListEditor items={ai.goals} onChange={(v) => setAi({ ...ai, goals: v })} /></Field>
           <div>
             <p className="mb-2 text-xs font-medium text-ink-soft">Cronograma sugerido ({ai.sessions.length} sessões) — editável após criar</p>
@@ -165,8 +188,9 @@ function NewPlanModal({ patient, assessment, open, onClose, onCreate }: {
   );
 }
 
-function SessionCard({ s, patientId, planTitle, onChange, onRemove, onSuggest }: {
+function SessionCard({ s, patientId, planTitle, onChange, onRemove, onSuggest, areaOptions }: {
   s: PlannedSession; patientId: string; planTitle: string; onChange: (next: PlannedSession) => void; onRemove: () => void; onSuggest: () => Promise<void>;
+  areaOptions: ReturnType<typeof buildAreaOptions>;
 }) {
   const [open, setOpen] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
@@ -182,7 +206,7 @@ function SessionCard({ s, patientId, planTitle, onChange, onRemove, onSuggest }:
         <button className="min-w-0 flex-1 text-left" onClick={() => setOpen(!open)}>
           <p className="text-sm font-medium">Sessão {s.number}{s.date ? <span className="font-normal text-ink-faint"> · {formatDate(s.date)}</span> : null}</p>
           <p className="truncate text-xs text-ink-soft">
-            {objectives.length ? objectives.map((o) => o.text).join(" · ") : "Sem objetivos definidos"}
+            {objectives.length ? groupByArea(objectives).map((g) => `${g.area}: ${g.items.length}`).join(" · ") : "Sem objetivos definidos"}
           </p>
         </button>
         <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
@@ -202,7 +226,7 @@ function SessionCard({ s, patientId, planTitle, onChange, onRemove, onSuggest }:
           </div>
           <div>
             <p className="mb-1.5 text-xs font-medium text-ink-soft">Objetivos da sessão</p>
-            <ObjectivesEditor value={objectives} onChange={(v) => onChange(withObjectives(s, v))} withStatus />
+            <ObjectivesEditor value={objectives} onChange={(v) => onChange(withObjectives(s, v))} withStatus areaOptions={areaOptions} />
           </div>
           <div>
             <p className="mb-1.5 text-xs font-medium text-ink-soft">Atividades</p>
@@ -229,14 +253,24 @@ function SessionCard({ s, patientId, planTitle, onChange, onRemove, onSuggest }:
 
 function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPlan; patient: Patient; onSave: (p: Partial<InterventionPlan>) => Promise<void>; onDelete: () => void }) {
   const toast = useToast();
-  const [f, setF] = useState(plan);
+  const { profile } = useData();
+  const [f, setF] = useState<InterventionPlan>({ ...plan, areas: areasOf(plan) });
   const [saving, setSaving] = useState(false);
   const activities = useCollection("activities", { orderBy: "title", ascending: true });
+  const bank = objectiveBank(profile);
+  const areaOptions = buildAreaOptions(f.areas ?? [], bank);
+  const setAreas = (areas: PlanArea[]) => setF({ ...f, areas, specific_objectives: flattenAreas(areas) });
+
+  // Progresso por área: resultado dos objetivos marcados nas sessões
+  const areaProgress = groupByArea(f.schedule.flatMap((x) => objectivesOf(x)).filter((o) => o.status)).map((g) => ({
+    area: g.area, total: g.items.length, ok: g.items.filter((o) => o.status === "atingido").length, partial: g.items.filter((o) => o.status === "parcial").length,
+  }));
 
   async function suggestSession(s: PlannedSession) {
     try {
       const r = await askAI<AiPlan["sessions"][number]>("plan_session", {
-        ...patientContext(patient), objetivos_atuais: objectivesOf(s).map((o) => o.text), objetivo_geral_do_plano: f.general_objective,
+        ...patientContext(patient), objetivos_atuais: objectivesOf(s).map((o) => ({ area: o.area, text: o.text })), objetivo_geral_do_plano: f.general_objective,
+        areas_do_plano: (f.areas ?? []).map((a) => ({ area: a.area, objetivos: a.objectives.map((o) => o.text) })),
         objetivos_especificos: f.specific_objectives.map((o) => o.text), numero_da_sessao: s.number,
         sessoes_anteriores: f.schedule.filter((x) => x.number < s.number).slice(-3).map((x) => ({
           objetivos: objectivesOf(x).map((o) => `${o.text}${o.status ? ` (${OBJECTIVE_STATUS[o.status].label})` : ""}`), registro: x.record,
@@ -259,7 +293,7 @@ function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPla
       toast(e instanceof Error ? e.message : "Erro na IA", "error");
     }
   }
-  useEffect(() => setF(plan), [plan]);
+  useEffect(() => setF({ ...plan, areas: areasOf(plan) }), [plan]);
   const done = f.schedule.filter((s) => s.done).length;
   const pct = f.schedule.length ? Math.round((done / f.schedule.length) * 100) : 0;
 
@@ -284,10 +318,20 @@ function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPla
           <Field label="Início"><Input type="date" value={f.start_date ?? ""} onChange={(e) => setF({ ...f, start_date: e.target.value })} /></Field>
           <Field label="Objetivo geral" className="sm:col-span-4"><Textarea value={f.general_objective ?? ""} onChange={(e) => setF({ ...f, general_objective: e.target.value })} /></Field>
         </div>
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">Áreas de intervenção e objetivos específicos</h4>
+          <PlanAreasEditor value={f.areas ?? []} onChange={setAreas} />
+          {areaProgress.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {areaProgress.map((a) => (
+                <span key={a.area} className="rounded-lg bg-canvas px-2.5 py-1 text-[11px] text-ink-soft">
+                  <b className="text-ink">{a.area}</b>: {a.ok}/{a.total} atingidos{a.partial ? `, ${a.partial} parciais` : ""}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Field label="Objetivos específicos">
-            <ListEditor items={f.specific_objectives.map((o) => o.text)} onChange={(v) => setF({ ...f, specific_objectives: v.map((text, i) => ({ id: f.specific_objectives[i]?.id ?? uid(), text })) })} placeholder="Novo objetivo específico" />
-          </Field>
           <Field label="Metas">
             <ListEditor items={f.goals.map((o) => o.text)} onChange={(v) => setF({ ...f, goals: v.map((text, i) => ({ id: f.goals[i]?.id ?? uid(), text })) })} placeholder="Nova meta" />
           </Field>
@@ -306,6 +350,7 @@ function PlanEditor({ plan, patient, onSave, onDelete }: { plan: InterventionPla
                 s={s}
                 patientId={f.patient_id}
                 planTitle={f.title}
+                areaOptions={areaOptions}
                 onChange={(next) => setF({ ...f, schedule: f.schedule.map((x) => (x.id === s.id ? next : x)) })}
                 onRemove={() => setF({ ...f, schedule: f.schedule.filter((x) => x.id !== s.id).map((x, i) => ({ ...x, number: i + 1 })) })}
                 onSuggest={() => suggestSession(s)}

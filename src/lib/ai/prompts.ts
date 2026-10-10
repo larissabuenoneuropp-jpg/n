@@ -12,7 +12,7 @@ Princípios obrigatórios:
 
 export type AiTask =
   | "assessment_plan" | "intervention_plan" | "session_insights" | "evolution_analysis" | "report_draft" | "chat"
-  | "application_guide" | "clinical_record" | "plan_session" | "social_post";
+  | "application_guide" | "clinical_record" | "plan_session" | "social_post" | "import_extract";
 
 export const TASK_INSTRUCTIONS: Record<AiTask, string> = {
   assessment_plan: `Monte um plano de avaliação neuropsicopedagógica a partir dos dados fornecidos.
@@ -31,23 +31,25 @@ Ordene os instrumentos na sequência sugerida de aplicação. Em "warnings" incl
 Se a entrada trouxer "biblioteca_de_instrumentos", prefira esses nomes exatamente como escritos e NÃO sugira aplicar os de acesso "psicologo".
 Itens de acesso "verificar" podem ser sugeridos com um aviso em "warnings".`,
 
-  intervention_plan: `Crie um plano de intervenção neuropsicopedagógica individualizado.
+  intervention_plan: `Crie um plano de intervenção neuropsicopedagógica individualizado, ORGANIZADO POR ÁREAS.
+Use, sempre que possível, os nomes de "areas_disponiveis" (ex.: "Consciência fonológica", "Atenção", "Matemática").
 Formato JSON:
 {
   "title": string,
   "general_objective": string,
-  "specific_objectives": string[],
+  "areas": [{ "area": string, "objectives": string[] }],
   "goals": string[],
   "progress_criteria": string,
   "sessions": [{
     "number": number,
-    "objectives": string[],
+    "objectives": [{ "area": string, "text": string }],
     "activities": [{ "title": string, "materials": string, "duration_min": number }],
     "materials": string, "duration_min": number, "strategies": string, "success_criteria": string
   }]
 }
+Escolha de 2 a 5 áreas prioritárias com 2 a 5 objetivos específicos cada (observáveis e mensuráveis).
 Gere o número de sessões solicitado (padrão 8), com progressão gradual de complexidade.
-Cada sessão deve ter de 3 a 5 objetivos específicos, observáveis e mensuráveis, e de 2 a 4 atividades cuja soma de tempo caiba na duração da sessão.`,
+Cada sessão deve ter de 3 a 5 objetivos escolhidos entre os objetivos das áreas do plano (indique a área de cada um) e de 2 a 4 atividades cuja soma de tempo caiba na duração da sessão.`,
 
   session_insights: `Analise o registro da sessão (e o histórico recente, se houver) e sugira os próximos passos.
 Formato JSON:
@@ -108,11 +110,11 @@ Formato JSON:
 Se houver atividades da biblioteca da profissional na entrada, prefira-as.
 Formato JSON:
 {
-  "objectives": string[],
+  "objectives": [{ "area": string, "text": string }],
   "activities": [{ "title": string, "materials": string, "duration_min": number }],
   "materials": string, "duration_min": number, "strategies": string, "success_criteria": string
 }
-Inclua de 3 a 5 objetivos específicos, observáveis e mensuráveis, e de 2 a 4 atividades cuja soma de tempo caiba na sessão.
+Inclua de 3 a 5 objetivos, escolhidos preferencialmente entre os objetivos das "areas_do_plano" (indique a área de cada um), e de 2 a 4 atividades cuja soma de tempo caiba na sessão.
 Se houver "objetivos_atuais", mantenha-os e complemente. Considere o resultado das sessões anteriores (objetivos não atingidos podem ser retomados).`,
 
   social_post: `Você agora atua como estrategista de conteúdo para o Instagram de uma neuropsicopedagoga, com o objetivo de atrair famílias (captação de pacientes) de forma ética.
@@ -140,6 +142,14 @@ Formato JSON:
 }
 Para "carrossel": 5 a 8 slides curtos (máx. ~30 palavras cada). Para "post": 1 slide. Para "reels": 4 a 7 cenas, 15 a 45 s, e slides pode ser vazio. Para "stories": 3 a 5 stories em "stories" (com enquete/caixinha quando fizer sentido).
 Legenda com até ~150 palavras, parágrafos curtos e emojis com moderação; 8 a 15 hashtags relevantes em português (misture amplas e de nicho).`,
+
+  import_extract: `Extraia do documento os dados cadastrais e clínicos do paciente (criança) para importação no prontuário.
+Use apenas o que está escrito; deixe "" quando não houver a informação. Não resuma excessivamente as seções clínicas: preserve o conteúdo.
+Datas no formato DD/MM/AAAA. Formato JSON com estas chaves (todas string):
+{ "name", "birth_date", "guardian_name", "guardian_relation", "guardian_phone", "guardian_email", "guardian_cpf", "guardian_rg",
+  "school", "grade", "teacher", "handedness", "diagnosis", "hypotheses", "referred_by", "medications",
+  "complaints", "history", "family_history", "personality", "school_history", "notes",
+  "street", "number", "district", "city", "state", "zip" }`,
 
   chat: `Responda à pergunta da profissional de forma objetiva.
 Formato JSON: { "answer": string }`,

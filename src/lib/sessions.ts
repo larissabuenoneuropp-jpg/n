@@ -45,7 +45,21 @@ export function assessmentSessionWithObjectives(s: AssessmentSessionPlan, object
 /** Normaliza uma resposta da IA (aceita lista ou texto único). */
 export function toObjectives(v: unknown): SessionObjective[] {
   const arr = Array.isArray(v) ? v : typeof v === "string" ? splitLegacy(v) : [];
-  return arr.map((x) => (typeof x === "string" ? x : String((x as { text?: string })?.text ?? ""))).filter(Boolean).map((text) => ({ id: uid(), text }));
+  return arr
+    .map((x) => {
+      if (typeof x === "string") return { text: x, area: undefined as string | undefined };
+      const o = x as { text?: string; objetivo?: string; area?: string; area_nome?: string };
+      return { text: String(o.text ?? o.objetivo ?? ""), area: o.area ?? o.area_nome };
+    })
+    .filter((o) => o.text)
+    .map((o) => ({ id: uid(), text: o.text, ...(o.area ? { area: o.area } : {}) }));
+}
+
+/** Agrupa objetivos por área, preservando a ordem em que as áreas aparecem. */
+export function groupByArea<T extends { area?: string }>(list: T[]) {
+  const groups = new Map<string, T[]>();
+  list.forEach((o) => { const k = o.area || "Sem área"; groups.set(k, [...(groups.get(k) ?? []), o]); });
+  return Array.from(groups, ([area, items]) => ({ area, items }));
 }
 export function toActivities(v: unknown): SessionActivity[] {
   if (typeof v === "string") return splitLegacy(v).map((title) => ({ id: uid(), title }));

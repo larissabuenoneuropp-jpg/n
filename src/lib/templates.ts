@@ -2,7 +2,7 @@
 
 export const REPORT_TYPES = [
   { value: "contrato", label: "Contrato de prestação de serviços" },
-  { value: "relatorio", label: "Relatório Neuropsicopedagógico" },
+  { value: "relatorio", label: "Relatório de Avaliação Neuropsicopedagógica (RAN)" },
   { value: "encaminhamento", label: "Encaminhamento" },
   { value: "declaracao", label: "Declaração" },
   { value: "atestado", label: "Atestado de comparecimento" },
@@ -13,6 +13,8 @@ export const REPORT_TYPES = [
 export type ReportType = (typeof REPORT_TYPES)[number]["value"];
 
 export const TEMPLATE_VARS = [
+  "dominancia", "responsavel_linha", "medicamento", "historico", "antecedentes", "jeito_de_ser", "vida_escolar",
+  "comportamento_avaliacao", "instrumentos_referencias", "resultados_por_area", "aspectos_comportamentais",
   "responsavel_cpf", "responsavel_rg", "responsavel_telefone", "responsavel_email",
   "endereco_rua", "endereco_bairro", "endereco_cidade_uf", "endereco_cep",
   "frequencia", "frequencia_extenso", "sessao_plural", "duracao_sessao", "duracao_extenso",
@@ -23,6 +25,9 @@ export const TEMPLATE_VARS = [
   "profissional", "profissao", "crnpp", "clinica", "cidade_data", "data", "objetivo_geral",
   "objetivos_especificos", "metas", "queixa", "instrumentos", "evolucao",
 ];
+
+/** Início do modelo de relatório antigo — substituído automaticamente pelo RAN. */
+export const LEGACY_RELATORIO_PREFIX = "RELATÓRIO NEUROPSICOPEDAGÓGICO\n\n1. IDENTIFICAÇÃO";
 
 export const DEFAULT_TEMPLATES: Record<string, string> = {
   // Modelo enviado pela profissional (Contrato Pacientes — Larissa Bueno), com os campos preenchidos pelo cadastro.
@@ -102,34 +107,61 @@ ___________________________________________
 {{responsavel}}
 Responsável`,
 
-  relatorio: `RELATÓRIO NEUROPSICOPEDAGÓGICO
+  // Modelo baseado no RAN da profissional. Marcação: "# título", ">> alinhado à direita", "## seção",
+  // "### subseção", "#### tópico", "[[legenda]]" e linhas "| a | b |" para quadros.
+  relatorio: `# RELATÓRIO DE AVALIAÇÃO NEUROPSICOPEDAGÓGICA (RAN)
+>> {{cidade_data}}
 
-1. IDENTIFICAÇÃO
-Nome: {{paciente}}
-Data de nascimento: {{nascimento}} — Idade: {{idade}}
-Responsável: {{responsavel}}
-Escola: {{escola}} — Ano/Série: {{serie}}
+## 1. IDENTIFICAÇÃO DA CRIANÇA
+Nome da criança: {{paciente}} | Data de nascimento: {{nascimento}}
+Idade: {{idade}} | Escolaridade: {{serie}} | Escola: {{escola}}
+Dominância manual: {{dominancia}}
+{{responsavel_linha}}
+Faz uso de medicamento: {{medicamento}}
 
-2. MOTIVO DO ENCAMINHAMENTO / QUEIXA
+## 2. QUEIXA
 {{queixa}}
 
-3. PROCEDIMENTOS E INSTRUMENTOS UTILIZADOS
-{{instrumentos}}
+## 3. HISTÓRICO DO DESENVOLVIMENTO E DA SAÚDE
+{{historico}}
 
-4. ANÁLISE DOS RESULTADOS
-[Descreva o desempenho observado em cada área avaliada.]
+## 4. ANTECEDENTES FAMILIARES
+{{antecedentes}}
 
-5. CONCLUSÃO
-[Síntese clínica, sem diagnóstico médico.]
+## 5. JEITO DE SER DA CRIANÇA, SEGUNDO A FAMÍLIA E/OU RESPONSÁVEL
+{{jeito_de_ser}}
 
-6. ENCAMINHAMENTOS E ORIENTAÇÕES
-[Orientações à família, à escola e encaminhamentos a outros profissionais.]
+## 6. VIDA ESCOLAR
+{{vida_escolar}}
 
-{{cidade_data}}
+## 7. COMPORTAMENTO DA CRIANÇA DURANTE A AVALIAÇÃO
+{{comportamento_avaliacao}}
 
-______________________________
+## 8. AVALIAÇÃO
+Para avaliação neuropsicopedagógica foram utilizados testes padronizados, qualitativos, ecológicos, quantitativos, além da anamnese, da observação clínica, lúdica, do material escolar e das informações obtidas pela escola, pela família e pela criança.
+
+### 8.1 Instrumentos
+Durante o processo de avaliação neuropsicopedagógica foram utilizados os seguintes instrumentos e procedimentos:
+{{instrumentos_referencias}}
+
+### 8.2 Síntese dos resultados
+Nesta seção são apresentados os resultados obtidos durante a avaliação neuropsicopedagógica, organizados de acordo com as habilidades cognitivas, acadêmicas, comportamentais e motoras investigadas. A interpretação dos achados fundamenta-se na integração dos resultados dos instrumentos padronizados, das avaliações qualitativas, das observações clínicas e lúdicas, bem como das informações fornecidas pela família, pela escola e pela própria criança.
+
+{{resultados_por_area}}
+
+## 9. ASPECTOS COMPORTAMENTAIS EM DIFERENTES CONTEXTOS
+{{aspectos_comportamentais}}
+
+## 10. CONCLUSÃO
+[completar — integração dos achados]
+
+### INDICAÇÕES
+[completar — encaminhamentos e orientações à família e à escola]
+
+
+___________________________________________
 {{profissional}}
-{{profissao}} — CRNPP {{crnpp}}`,
+{{assinatura_titulo}}`,
 
   encaminhamento: `ENCAMINHAMENTO
 

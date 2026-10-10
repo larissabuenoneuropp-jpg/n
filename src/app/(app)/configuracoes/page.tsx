@@ -1,16 +1,18 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Building2, Download, FileText, History, KeyRound, RotateCcw, Save, ShieldCheck, Upload } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { BellRing, Building2, Download, FileText, History, KeyRound, RotateCcw, Save, ShieldCheck, Upload } from "lucide-react";
 import { Avatar, Button, Card, CardHeader, Field, Input, PageHeader, Select, Tabs, Textarea, useToast } from "@/components/ui";
 import { useData } from "@/lib/data/provider";
 import { DemoStore } from "@/lib/data/demo-store";
-import { DEFAULT_TEMPLATES, REPORT_TYPES, TEMPLATE_VARS } from "@/lib/templates";
+import { DEFAULT_TEMPLATES, LEGACY_RELATORIO_PREFIX, REPORT_TYPES, TEMPLATE_VARS } from "@/lib/templates";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
-import type { AuditLog, Profile } from "@/lib/types";
+import type { AuditLog, BillingRules, Profile } from "@/lib/types";
+import { BILLING_TEMPLATES, DEFAULT_BILLING_RULES } from "@/lib/billing";
 import { downloadBlob } from "@/lib/utils";
 
-type Tab = "clinica" | "modelos" | "seguranca";
+type Tab = "clinica" | "modelos" | "cobrancas" | "seguranca";
 
 const TABLE_LABEL: Record<string, string> = {
   patients: "Paciente", assessments: "Avaliação", intervention_plans: "Plano", appointments: "Agenda", session_records: "Sessão",
@@ -50,9 +52,18 @@ function ImageUpload({ label, path, onChange }: { label: string; path?: string |
 }
 
 export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsInner />
+    </Suspense>
+  );
+}
+
+function SettingsInner() {
+  const params = useSearchParams();
   const { store, profile, refreshProfile } = useData();
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>("clinica");
+  const [tab, setTab] = useState<Tab>((params.get("tab") as Tab) || "clinica");
   const [f, setF] = useState<Partial<Profile>>({});
   const [tplType, setTplType] = useState<string>("relatorio");
   const [saving, setSaving] = useState(false);
@@ -60,7 +71,11 @@ export default function SettingsPage() {
   const [pwd, setPwd] = useState("");
 
   useEffect(() => {
-    if (profile) setF({ ...profile, templates: { ...DEFAULT_TEMPLATES, ...(profile.templates ?? {}) } });
+    if (profile) {
+      const templates = { ...DEFAULT_TEMPLATES, ...(profile.templates ?? {}) };
+      if (templates.relatorio?.startsWith(LEGACY_RELATORIO_PREFIX)) templates.relatorio = DEFAULT_TEMPLATES.relatorio;
+      setF({ ...profile, templates });
+    }
   }, [profile]);
   useEffect(() => {
     if (tab === "seguranca") store.auditLogs(100).then(setLogs).catch(() => {});
@@ -101,6 +116,7 @@ export default function SettingsPage() {
       <Tabs value={tab} onChange={setTab} tabs={[
         { value: "clinica", label: "Clínica e profissional", icon: <Building2 className="h-4 w-4" /> },
         { value: "modelos", label: "Modelos de documentos", icon: <FileText className="h-4 w-4" /> },
+        { value: "cobrancas", label: "Cobranças", icon: <BellRing className="h-4 w-4" /> },
         { value: "seguranca", label: "Segurança e LGPD", icon: <ShieldCheck className="h-4 w-4" /> },
       ]} />
       <div className="pt-5">
@@ -153,6 +169,42 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        {tab === "cobrancas" && (() => {
+          const rules: BillingRules = { ...DEFAULT_BILLING_RULES, ...(f.billing_rules ?? {}) };
+          const setRules = (patch: Partial<BillingRules>) => set("billing_rules", { ...rules, ...patch });
+          const tpl = (k: keyof typeof BILLING_TEMPLATES) => f.templates?.[k] ?? BILLING_TEMPLATES[k];
+          const setTpl = (k: keyof typeof BILLING_TEMPLATES, v: string) => set("templates", { ...f.templates, [k]: v });
+          return (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader title="Regras de cobrança automática" subtitle="As mensagens são preparadas pelas datas de vencimento e SEMPRE aguardam sua aprovação" />
+                <div className="space-y-3 p-5 text-sm">
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={rules.enabled} onChange={(e) => setRules({ enabled: e.target.checked })} /> Preparar cobranças automaticamente</label>
+                  <Field label="Lembrete antes do vencimento (dias; 0 = não enviar)"><Input type="number" min={0} max={15} value={rules.days_before} onChange={(e) => setRules({ days_before: Number(e.target.value) })} /></Field>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={rules.on_due} onChange={(e) => setRules({ on_due: e.target.checked })} /> Mensagem no dia do vencimento</label>
+                  <Field label="Cobrança após o vencimento (dias de atraso, separados por vírgula)">
+                    <Input value={rules.days_after.join(", ")} onChange={(e) => setRules({ days_after: e.target.value.split(/[,;\s]+/).map(Number).filter((n) => n > 0) })} />
+                  </Field>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={rules.whatsapp} onChange={(e) => setRules({ whatsapp: e.target.checked })} /> WhatsApp</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={rules.email} onChange={(e) => setRules({ email: e.target.checked })} /> E-mail</label>
+                  </div>
+                  <p className="text-[11px] text-ink-faint">Os contatos usados são o telefone e o e-mail do responsável contratante (cadastro do paciente). Quando o pagamento é registrado, as mensagens ainda não aprovadas são canceladas.</p>
+                </div>
+              </Card>
+              <Card>
+                <CardHeader title="Textos das mensagens" subtitle="Variáveis: {{responsavel}} {{paciente}} {{descricao}} {{valor}} {{vencimento}} {{pix_linha}} {{profissional}}" />
+                <div className="space-y-3 p-5">
+                  <Field label="Lembrete (antes do vencimento)"><Textarea rows={3} value={tpl("cobranca_lembrete")} onChange={(e) => setTpl("cobranca_lembrete", e.target.value)} /></Field>
+                  <Field label="Dia do vencimento"><Textarea rows={3} value={tpl("cobranca_vencimento")} onChange={(e) => setTpl("cobranca_vencimento", e.target.value)} /></Field>
+                  <Field label="Em atraso"><Textarea rows={3} value={tpl("cobranca_atraso")} onChange={(e) => setTpl("cobranca_atraso", e.target.value)} /></Field>
+                  <Field label="Assunto do e-mail"><Input value={tpl("cobranca_assunto")} onChange={(e) => setTpl("cobranca_assunto", e.target.value)} /></Field>
+                </div>
+              </Card>
+            </div>
+          );
+        })()}
 
         {tab === "modelos" && (
           <Card>

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Search, UploadCloud, Users } from "lucide-react";
 import { Avatar, Badge, Button, Card, EmptyState, Input, PageHeader, Segmented, Spinner } from "@/components/ui";
 import { PatientForm } from "@/components/patients/patient-form";
 import { useCollection, useData } from "@/lib/data/provider";
@@ -43,7 +43,10 @@ function PatientsInner() {
       <PageHeader
         title="Pacientes"
         subtitle="Prontuários digitais organizados"
-        actions={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo paciente</Button>}
+        actions={<>
+          <Link href="/pacientes/importar"><Button variant="secondary"><UploadCloud className="h-4 w-4" /> Importar do Drive</Button></Link>
+          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo paciente</Button>
+        </>}
       />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
