@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-canvas text-ink antialiased;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .print-area { box-shadow: none !important; border: none !important; padding: 0 !important; }
+  @page { margin: 18mm; }
+}
