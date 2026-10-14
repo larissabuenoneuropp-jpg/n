@@ -429,7 +429,7 @@ a:hover { color: var(--terracota-mais-escura); }
   width: 100%;
   aspect-ratio: 4 / 5;
   object-fit: cover;
-  object-position: 55% 40%;
+  object-position: 50% 35%;
   border-radius: 6px;
 }
 .apresentacao__texto { max-width: 40rem; }
@@ -529,19 +529,18 @@ a:hover { color: var(--terracota-mais-escura); }
   clip-path: inset(0 -100vmax);
 }
 @media (min-width: 900px) {
-  .servico__faixa {
+  .servico__faixa.tem-foto {
     display: grid;
-    grid-template-columns: 7fr 5fr;
+    grid-template-columns: 5fr 7fr;
     column-gap: clamp(3rem, 6vw, 6rem);
-    align-items: start;
+    align-items: center;
   }
-  .servico__faixa .servico__cabeca { grid-column: 1 / -1; }
 }
+.servico__faixa .servico__foto { margin: 0 0 2.5rem; }
+@media (min-width: 900px) { .servico__faixa .servico__foto { margin: 0; } }
+.servico__conteudo { max-width: 42rem; }
 .servico--intervencao .servico__num { color: var(--salvia-escura); }
-.servico__areas { margin-top: 2rem; }
-@media (min-width: 900px) {
-  .servico__areas { margin-top: 0; padding-left: 2rem; border-left: 1px solid #cfd3c2; }
-}
+.servico__areas { margin-top: 2.25rem; padding-top: 1.75rem; border-top: 1px solid #cfd3c2; }
 .servico__areas .rotulo { margin-top: 0; }
 .areas { display: flex; flex-wrap: wrap; gap: 0.35rem 1.4rem; margin: 0; font-family: var(--fonte-titulo); font-variation-settings: "SOFT" 100; font-size: 1.15rem; line-height: 1.6; }
 .areas span { display: inline-flex; align-items: center; gap: 0.55rem; white-space: nowrap; }
@@ -648,11 +647,12 @@ a:hover { color: var(--terracota-mais-escura); }
 /* ---------- Local ---------- */
 
 .local { padding-block: var(--secao) 0; }
-.local__grade { display: grid; gap: 1.5rem clamp(3rem, 6vw, 6rem); }
-@media (min-width: 900px) { .local__grade { grid-template-columns: 4fr 7fr; } }
-.local h2 { font-size: clamp(1.85rem, 1.3rem + 2.3vw, 2.8rem); line-height: 1.14; }
-.local__texto { max-width: 40rem; padding-top: 0.25rem; }
-@media (min-width: 900px) { .local__texto { padding-top: 2.6rem; } }
+.local__grade { display: grid; gap: 2.5rem clamp(3rem, 6vw, 6rem); align-items: center; }
+@media (min-width: 900px) { .local__grade.tem-foto { grid-template-columns: 6fr 5fr; } }
+.local h2 { font-size: clamp(1.85rem, 1.3rem + 2.3vw, 2.8rem); line-height: 1.14; margin-bottom: 1.5rem; }
+.local__texto { max-width: 40rem; }
+.local__foto { margin: 0; max-width: 28rem; }
+.local__foto img { width: 100%; border-radius: 6px; }
 
 /* ---------- Dúvidas ---------- */
 

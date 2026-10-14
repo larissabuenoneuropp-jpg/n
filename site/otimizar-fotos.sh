@@ -21,8 +21,10 @@ fi
 for f in "${arquivos[@]}"; do
   nome="$(basename "${f%.*}")"
   convert "$f" -auto-orient -strip -resize '1600x>' -sampling-factor 4:2:0 -interlace JPEG -quality 82 "$destino/$nome.jpg"
+  largura=$(identify -format "%w" "$destino/$nome.jpg")
   for w in 800 1400; do
-    convert "$destino/$nome.jpg" -resize "${w}x>" -quality 78 "$destino/$nome-$w.webp"
+    # só gera a cópia se a original for maior (senão o tamanho declarado no site seria falso)
+    [ "$largura" -gt "$w" ] && convert "$destino/$nome.jpg" -resize "${w}x" -quality 78 "$destino/$nome-$w.webp"
   done
   echo "ok  $nome  ($(du -h "$destino/$nome.jpg" | cut -f1) jpg)"
 done

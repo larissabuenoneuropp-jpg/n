@@ -20,16 +20,24 @@
   "cbo": "2394-40",
   "fotos": {
     "inicio": {
+      "arquivo": "img/fotos/retrato-sorriso.jpg",
+      "alt": "Retrato de Larissa Bueno sorrindo, com as mãos apoiadas sob o queixo, sentada à mesa da sala de atendimento."
+    },
+    "apresentacao": {
+      "arquivo": "img/fotos/retrato-tablet.jpg",
+      "alt": "Larissa Bueno sentada à mesa da sala de atendimento, com uma caneta digital na mão e um tablet à frente, olhando para a câmera."
+    },
+    "atendimento": {
       "arquivo": "img/fotos/larissa-atividade-pecas.jpg",
       "alt": "Larissa Bueno sorri sentada à mesa da sala de atendimento, conduzindo uma atividade com peças coloridas; a criança aparece de costas, em primeiro plano."
     },
-    "apresentacao": {
-      "arquivo": "img/fotos/larissa-letra-vermelha.jpg",
-      "alt": "Larissa Bueno mostra uma letra vermelha a uma criança sentada em uma mesinha de madeira e verde-água, com estantes de livros ao fundo."
-    },
-    "atendimento": {
+    "intervencao": {
       "arquivo": "img/fotos/letras-mesa-vista-de-cima.jpg",
       "alt": "Vista de cima de uma atividade: a criança organiza letras de madeira coloridas sobre a mesa verde-água enquanto Larissa Bueno acompanha e incentiva."
+    },
+    "local": {
+      "arquivo": "img/fotos/larissa-letra-vermelha.jpg",
+      "alt": "Sala de atendimento: Larissa Bueno mostra uma letra vermelha a uma criança sentada em uma mesinha de madeira e verde-água, com estantes de livros ao fundo."
     }
   },
   "adobeFontsKit": ""

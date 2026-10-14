@@ -31,13 +31,15 @@ node build.mjs                # produção: falha se não houver canal de contat
 
 ## Fotos
 
-As três fotos já estão no site, sem edição: os JPGs são os originais (sem metadados de localização) e as versões WebP de 800 e 1400 px são cópias mais leves para celular. Se alguma foto for removida, o início volta a mostrar a composição com os elementos da marca e as outras seções se reorganizam sem foto.
+As cinco fotos já estão no site, sem edição: os JPGs são os originais (sem metadados de localização) e as versões WebP de 800 e 1400 px são cópias mais leves para celular. Se alguma foto for removida, o início volta a mostrar a composição com os elementos da marca e as outras seções se reorganizam sem foto.
 
 | Espaço | Arquivo esperado em `src/img/fotos/` | Foto |
 | --- | --- | --- |
-| Início | `larissa-atividade-pecas.jpg` | Larissa de frente, à mesa, com o jogo de peças coloridas (criança de costas) |
-| Apresentação | `larissa-letra-vermelha.jpg` | Larissa mostrando a letra vermelha, com estantes ao fundo |
-| Avaliação | `letras-mesa-vista-de-cima.jpg` | Vista de cima, letras de madeira na mesa verde-água |
+| Início | `retrato-sorriso.jpg` | Retrato sorrindo, mãos sob o queixo |
+| Apresentação | `retrato-tablet.jpg` | Retrato com caneta e tablet, olhando para a câmera |
+| Avaliação | `larissa-atividade-pecas.jpg` | Atividade com peças coloridas (criança de costas) |
+| Intervenção | `letras-mesa-vista-de-cima.jpg` | Vista de cima, letras de madeira na mesa verde-água |
+| Onde atendo | `larissa-letra-vermelha.jpg` | Letra vermelha, com as estantes da sala ao fundo |
 
 Para otimizar (corrigir rotação, **remover localização GPS e outros metadados**, reduzir tamanho e gerar WebP), coloque as originais em `site/fotos-originais/` com esses nomes e rode `./otimizar-fotos.sh` (requer ImageMagick).
 A pasta `fotos-originais/` é ignorada pelo Git de propósito. **Este repositório é público:** não envie fotos originais de celular/câmera para ele sem remover os metadados.

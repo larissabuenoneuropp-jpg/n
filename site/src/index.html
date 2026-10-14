@@ -169,38 +169,41 @@
         </article>
 
         <article class="servico servico--intervencao" aria-labelledby="s-intervencao">
-          <div class="servico__faixa">
-            <div class="servico__cabeca">
-              <span class="servico__num" aria-hidden="true">02</span>
-              <h3 id="s-intervencao">Intervenção neuropsicopedagógica</h3>
+          <div class="servico__faixa {{intervencao_classe}}">
+            {{foto_intervencao}}
+            <div class="servico__conteudo">
+              <div class="servico__cabeca">
+                <span class="servico__num" aria-hidden="true">02</span>
+                <h3 id="s-intervencao">Intervenção neuropsicopedagógica</h3>
+              </div>
+              <div class="servico__corpo">
+                <p>
+                  Acompanhamento organizado a partir das necessidades identificadas. Cada criança tem um
+                  plano individual, com objetivos definidos por área e atividades pensadas para desenvolver
+                  as habilidades que mais importam para a sua aprendizagem naquele momento.
+                </p>
+                <p>
+                  O plano não é fixo. A evolução é registrada ao longo das sessões e, a cada seis meses,
+                  o plano é revisto e apresentado aos responsáveis em uma reunião, podendo haver ajustes nos
+                  objetivos ou na frequência.
+                </p>
+                <p>
+                  Não trabalho com prazos fixos nem prometo resultados: cada criança tem o seu ritmo, e o
+                  acompanhamento serve justamente para mostrar o que está avançando e o que precisa
+                  de outra estratégia.
+                </p>
+              </div>
+              <aside class="servico__areas" aria-label="Exemplos de áreas trabalhadas">
+                <h4 class="rotulo">Algumas áreas que podem compor o plano</h4>
+                <p class="areas">
+                  <span>Consciência fonológica</span> <span>Alfabetização</span> <span>Leitura e compreensão</span>
+                  <span>Escrita</span> <span>Matemática</span> <span>Atenção</span>
+                  <span>Funções executivas</span> <span>Memória</span> <span>Linguagem</span>
+                  <span>Autonomia nos estudos</span>
+                </p>
+                <p class="areas__nota">As áreas são escolhidas a partir da avaliação, e não de um programa pronto.</p>
+              </aside>
             </div>
-            <div class="servico__corpo">
-              <p>
-                Acompanhamento organizado a partir das necessidades identificadas. Cada criança tem um
-                plano individual, com objetivos definidos por área e atividades pensadas para desenvolver
-                as habilidades que mais importam para a sua aprendizagem naquele momento.
-              </p>
-              <p>
-                O plano não é fixo. A evolução é registrada ao longo das sessões e, a cada seis meses,
-                o plano é revisto e apresentado aos responsáveis em uma reunião, podendo haver ajustes nos
-                objetivos ou na frequência.
-              </p>
-              <p>
-                Não trabalho com prazos fixos nem prometo resultados: cada criança tem o seu ritmo, e o
-                acompanhamento serve justamente para mostrar o que está avançando e o que precisa
-                de outra estratégia.
-              </p>
-            </div>
-            <aside class="servico__areas" aria-label="Exemplos de áreas trabalhadas">
-              <h4 class="rotulo">Algumas áreas que podem compor o plano</h4>
-              <p class="areas">
-                <span>Consciência fonológica</span> <span>Alfabetização</span> <span>Leitura e compreensão</span>
-                <span>Escrita</span> <span>Matemática</span> <span>Atenção</span>
-                <span>Funções executivas</span> <span>Memória</span> <span>Linguagem</span>
-                <span>Autonomia nos estudos</span>
-              </p>
-              <p class="areas__nota">As áreas são escolhidas a partir da avaliação, e não de um programa pronto.</p>
-            </aside>
           </div>
         </article>
 
@@ -338,14 +341,13 @@
 
     <!-- Local -->
     <section class="local" id="local" aria-labelledby="local-titulo">
-      <div class="moldura local__grade">
-        <div>
+      <div class="moldura local__grade {{local_classe}}">
+        <div class="local__texto">
           <p class="sobretitulo">Local de atendimento</p>
           <h2 id="local-titulo">Onde atendo</h2>
-        </div>
-        <div class="local__texto">
           {{local_texto}}
         </div>
+        {{foto_local}}
       </div>
     </section>
 

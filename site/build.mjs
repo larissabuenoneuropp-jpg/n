@@ -212,6 +212,8 @@ const heroVisual = fotoInicio ? `<div class="arco">${fotoInicio}</div>\n        
 
 const fotoApresentacao = foto("apresentacao", { sizes: "(min-width: 900px) 40vw, 100vw" });
 const fotoAtendimento = foto("atendimento", { sizes: "(min-width: 900px) 35vw, 100vw" });
+const fotoIntervencao = foto("intervencao", { sizes: "(min-width: 900px) 38vw, 100vw" });
+const fotoLocal = foto("local", { sizes: "(min-width: 900px) 28rem, 100vw" });
 
 // ---------- SEO ----------
 
@@ -278,6 +280,10 @@ const valores = {
   apresentacao_classe: fotoApresentacao ? "tem-foto" : "sem-foto",
   foto_atendimento: fotoAtendimento ? `<figure class="servico__foto">${fotoAtendimento}</figure>` : "",
   atendimento_classe: fotoAtendimento ? "tem-foto" : "sem-foto",
+  foto_intervencao: fotoIntervencao ? `<figure class="servico__foto">${fotoIntervencao}</figure>` : "",
+  intervencao_classe: fotoIntervencao ? "tem-foto" : "sem-foto",
+  foto_local: fotoLocal ? `<figure class="local__foto">${fotoLocal}</figure>` : "",
+  local_classe: fotoLocal ? "tem-foto" : "sem-foto",
   ficha_formacao: fichaFormacao,
   ficha_local: fichaLocal,
   ficha_registro: fichaRegistro,

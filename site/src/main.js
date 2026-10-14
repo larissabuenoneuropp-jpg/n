@@ -43,7 +43,7 @@
 
   // Revelação ao rolar: grupos em sequência ganham um pequeno atraso entre si
   var grupos = [
-    [".cabeca-secao, .apresentacao > .moldura > .sobretitulo, .apresentacao h2, .apresentacao__texto, .percurso__cabeca, .local__grade > *, .duvidas__grade > header, .perguntas, .ponderacao, .servico__cabeca, .servico__corpo, .servico__areas, .servico__frase, .contato__grade > *", 0],
+    [".cabeca-secao, .apresentacao > .moldura > .sobretitulo, .apresentacao h2, .apresentacao__texto, .percurso__cabeca, .local__texto, .duvidas__grade > header, .perguntas, .ponderacao, .servico__cabeca, .servico__corpo, .servico__areas, .servico__frase, .contato__grade > *", 0],
     [".ficha > div", 0.07],
     [".etapas li", 0.08],
     [".principio", 0.1],
@@ -62,7 +62,7 @@
       alvos.push(el);
     });
   });
-  document.querySelectorAll(".apresentacao__foto, .servico__foto").forEach(function (el) {
+  document.querySelectorAll(".apresentacao__foto, .servico__foto, .local__foto").forEach(function (el) {
     if (el.getBoundingClientRect().top < window.innerHeight * 0.9) return;
     el.classList.add("revelar-imagem");
     alvos.push(el);
