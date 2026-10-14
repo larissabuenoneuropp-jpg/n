@@ -508,11 +508,12 @@ a:hover { color: var(--terracota-mais-escura); }
 }
 .servico__foto { margin: 2.5rem 0 0; }
 .servico__foto img {
+  /* proporção original da foto, sem corte */
   width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
-  object-position: 45% 62%;
-  border-radius: 999px 999px 6px 6px;
+  border-radius: 6px;
+}
+@media (max-width: 899px) {
+  .servico__foto { max-width: 26rem; }
 }
 .servico__foto figcaption { margin-top: 0.8rem; font-size: 0.88rem; color: var(--tinta-suave); }
 @media (min-width: 900px) {

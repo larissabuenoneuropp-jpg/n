@@ -31,7 +31,7 @@ node build.mjs                # produção: falha se não houver canal de contat
 
 ## Fotos
 
-O site já tem os espaços e os textos alternativos para três fotos. Enquanto elas não existirem, o início mostra uma composição com os elementos da marca e as outras seções se reorganizam sem foto.
+As três fotos já estão no site, sem edição: os JPGs são os originais (sem metadados de localização) e as versões WebP de 800 e 1400 px são cópias mais leves para celular. Se alguma foto for removida, o início volta a mostrar a composição com os elementos da marca e as outras seções se reorganizam sem foto.
 
 | Espaço | Arquivo esperado em `src/img/fotos/` | Foto |
 | --- | --- | --- |
