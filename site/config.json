@@ -2,21 +2,22 @@
   "url": "",
   "nome": "Larissa Bueno",
   "atuacao": "Professora e neuropsicopedagoga",
-
-  "whatsapp": "",
+  "whatsapp": "5547996921817",
   "mensagemWhatsapp": "Olá, Larissa! Conheci seu site e gostaria de saber mais sobre os atendimentos neuropsicopedagógicos.",
   "instagram": "",
   "email": "",
-
-  "cidades": [],
-  "uf": "",
-  "atendimentoDomiciliar": false,
-
-  "formacao": [
-    { "titulo": "Pedagogia", "detalhe": "" }
+  "cidades": [
+    "Balneário Camboriú"
   ],
-  "registroProfissional": "",
-
+  "uf": "SC",
+  "atendimentoDomiciliar": false,
+  "formacao": [
+    {
+      "titulo": "Pedagogia",
+      "detalhe": ""
+    }
+  ],
+  "cbo": "2394-40",
   "fotos": {
     "inicio": {
       "arquivo": "img/fotos/larissa-atividade-pecas.jpg",
@@ -31,6 +32,5 @@
       "alt": "Vista de cima de uma atividade: a criança organiza letras de madeira coloridas sobre a mesa verde-água enquanto Larissa Bueno acompanha e incentiva."
     }
   },
-
   "adobeFontsKit": ""
 }

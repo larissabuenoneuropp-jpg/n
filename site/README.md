@@ -20,12 +20,12 @@ node build.mjs                # produção: falha se não houver canal de contat
 
 | Campo | Para que serve | Situação |
 | --- | --- | --- |
-| `whatsapp` | Botões de contato. DDI + DDD + número, só dígitos (ex.: `5547…`). A mensagem inicial está em `mensagemWhatsapp`. | **Pendente.** Sem ele, o build de produção não roda (para não publicar botão que não funciona). |
+| `whatsapp` | Botões de contato. DDI + DDD + número, só dígitos. A mensagem inicial está em `mensagemWhatsapp`. Sem ele, o build de produção não roda. | (47) 99692-1817 |
 | `url` | Domínio final (`https://…`). Gera canonical, imagem de compartilhamento, sitemap e dados estruturados. | **Pendente** |
-| `cidades` / `uf` | Região de atendimento (aparece no texto e na descrição para o Google). | **Pendente — só preencha o que for confirmado.** |
-| `atendimentoDomiciliar` | `true` passa a dizer que há atendimento em domicílio. | `false` até você confirmar |
+| `cidades` / `uf` | Região de atendimento (aparece no texto e na descrição para o Google). | Balneário Camboriú (SC) |
+| `atendimentoDomiciliar` | `true` passa a dizer que há atendimento em domicílio. | `false` (não há) |
 | `formacao` | Lista exibida em “Formação”. `detalhe` aceita instituição/ano ou “em andamento”. | “Pedagogia” — **confirmar** |
-| `registroProfissional` | Ex.: número de registro, se houver. Só aparece se preenchido. | vazio |
+| `cbo` | Código da ocupação na Classificação Brasileira de Ocupações (aparece na apresentação e no rodapé). Não é registro profissional. | 2394-40 |
 | `instagram`, `email` | Canais extras (aparecem no contato e no rodapé). | vazios |
 | `adobeFontsKit` | ID de um kit do Adobe Fonts com a **Neulis**; ela passa a ser usada nos títulos. | opcional |
 

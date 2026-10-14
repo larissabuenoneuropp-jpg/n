@@ -119,18 +119,18 @@ const rodapeContatos = rodapeItens.length ? `<ul>${rodapeItens.join("")}</ul>` :
 
 // ---------- Local, formação e registro ----------
 
-const cidadesTexto = cidades.length ? `, em ${lista(cidades.map(esc))}${uf ? ` (${esc(uf)})` : ""}` : "";
+const cidadesTexto = cidades.length ? ` em ${lista(cidades.map(esc))}${uf ? ` (${esc(uf)})` : ""}` : "";
 const fichaLocal =
   `Presencial, em sala de atendimento${cidadesTexto}` +
-  (cfg.atendimentoDomiciliar ? "; também em domicílio, quando combinado" : "; em outro local, quando combinado com a família");
+  (cfg.atendimentoDomiciliar ? "; também em domicílio, quando combinado" : "");
 
 const localTexto = [
   `<p>Os atendimentos são presenciais, em sala de atendimento${cidadesTexto}.</p>`,
   cfg.atendimentoDomiciliar
     ? `<p>Também podem acontecer em domicílio ou em outro local combinado previamente com a família, conforme a necessidade e a disponibilidade de agenda.</p>`
-    : `<p>Quando há uma necessidade justificada, podem acontecer em outro local, combinado previamente com a família.</p>`,
+    : "",
   `<p>Endereço, dias e horários disponíveis são informados no primeiro contato. <a href="#contato">Consultar disponibilidade</a></p>`,
-].join("\n          ");
+].filter(Boolean).join("\n          ");
 
 const formacao = (cfg.formacao || []).filter((f) => f && f.titulo);
 const fichaFormacao = formacao.length
@@ -140,9 +140,11 @@ const fichaFormacao = formacao.length
               </div>`
   : "";
 
-const registro = String(cfg.registroProfissional || "").trim();
-const fichaRegistro = registro ? `<div>\n                <dt>Registro</dt>\n                <dd>${esc(registro)}</dd>\n              </div>` : "";
-const rodapeRegistro = registro ? `<p>${esc(registro)}</p>` : "";
+// CBO = código da ocupação na Classificação Brasileira de Ocupações (não é registro profissional)
+const cbo = String(cfg.cbo || "").trim();
+if (cbo && !/^\d{4}-\d{2}$/.test(cbo)) erros.push(`"cbo" deve ter o formato 0000-00.`);
+const fichaRegistro = cbo ? `<div>\n                <dt>CBO</dt>\n                <dd>${esc(cbo)}</dd>\n              </div>` : "";
+const rodapeRegistro = cbo ? `<p>CBO ${esc(cbo)}</p>` : "";
 
 // ---------- Fotos ----------
 
@@ -213,7 +215,9 @@ const fotoAtendimento = foto("atendimento", { sizes: "(min-width: 900px) 35vw, 1
 
 // ---------- SEO ----------
 
-const titulo = `${nome} | Neuropsicopedagogia infantil: avaliação e intervenção`;
+const titulo = cidades.length
+  ? `${nome} | Neuropsicopedagogia infantil em ${cidades[0]}`
+  : `${nome} | Neuropsicopedagogia infantil: avaliação e intervenção`;
 const descricao =
   `Avaliação e intervenção neuropsicopedagógica para crianças de 5 a 13 anos` +
   (cidades.length ? ` em ${lista(cidades)}` : "") +
