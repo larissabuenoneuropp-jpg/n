@@ -1,0 +1,3 @@
+dist/
+# Fotos originais podem conter localização (GPS) e outros metadados: não versionar.
+fotos-originais/

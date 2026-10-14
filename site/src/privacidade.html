@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de privacidade · {{nome}}</title>
+  <meta name="description" content="Como este site trata dados pessoais e como funciona o contato com {{nome}}.">
+  {{canonical_privacidade}}
+  <meta name="theme-color" content="#FBF8F3">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+  {{adobe}}
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.replace("no-js", "js");</script>
+</head>
+<body>
+  <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+  <header class="topo rolou" id="topo">
+    <div class="topo__barra">
+      <a class="topo__marca" href="./" aria-label="{{nome}} — voltar ao início">
+        <picture>
+          <source srcset="img/logo.webp" type="image/webp">
+          <img src="img/logo.png" alt="{{nome}} — {{atuacao}}" width="505" height="146">
+        </picture>
+      </a>
+      <a class="botao botao--leve" href="./">Voltar ao site</a>
+    </div>
+  </header>
+
+  <main id="conteudo" class="pagina">
+    <div class="moldura">
+      <p class="sobretitulo">Privacidade</p>
+      <h1>Política de privacidade</h1>
+      <p>
+        Este site apresenta o trabalho de {{nome}}. Ele foi feito para coletar o mínimo possível de
+        informações. Esta página explica, de forma direta, o que acontece com os seus dados.
+      </p>
+
+      <h2>O que este site coleta</h2>
+      <ul>
+        <li>O site não tem formulários, não pede cadastro e não usa cookies de publicidade ou de rastreamento.</li>
+        <li>Não são usadas ferramentas de análise de visitas (como Google Analytics) nem pixels de redes sociais.</li>
+        <li>As fontes e imagens são carregadas do próprio site, sem chamadas a serviços de terceiros.</li>
+        <li>O serviço de hospedagem pode registrar dados técnicos de acesso, como endereço IP, data e navegador, para fins de segurança e funcionamento.</li>
+      </ul>
+
+      <h2>Quando você entra em contato</h2>
+      <p>
+        Ao clicar em um botão de contato, você é direcionado para um serviço externo (como o WhatsApp),
+        que tem suas próprias regras de privacidade. As informações que você enviar, como nome, telefone e
+        mensagem, são usadas apenas para responder e combinar um possível atendimento, e não são
+        compartilhadas com terceiros.
+      </p>
+      <p>
+        Para preservar a privacidade da criança, não é necessário enviar nome completo, laudos ou
+        informações de saúde no primeiro contato.
+      </p>
+
+      <h2>Durante o atendimento</h2>
+      <p>
+        As informações obtidas durante o atendimento são protegidas por sigilo profissional, conforme a
+        legislação vigente, em especial o Estatuto da Criança e do Adolescente (ECA) e a Lei Geral de
+        Proteção de Dados Pessoais (LGPD). O compartilhamento com a escola ou com outros profissionais só
+        acontece com autorização dos responsáveis, salvo nos casos previstos em lei.
+      </p>
+
+      <h2>Seus direitos</h2>
+      <p>
+        Você pode pedir, a qualquer momento, acesso, correção ou exclusão dos seus dados pessoais
+        {{canal_privacidade}}.
+      </p>
+
+      <p class="nota">Última atualização: {{data_atualizacao}}.</p>
+    </div>
+  </main>
+
+  <footer class="rodape">
+    <div class="moldura rodape__base">
+      <p>© {{ano}} {{nome}} · <a href="./">Voltar ao início</a></p>
+    </div>
+  </footer>
+</body>
+</html>

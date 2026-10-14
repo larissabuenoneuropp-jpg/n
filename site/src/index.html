@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="pt-BR" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{titulo}}</title>
+  <meta name="description" content="{{descricao}}">
+  {{canonical}}
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="{{nome}}">
+  <meta property="og:title" content="{{titulo}}">
+  <meta property="og:description" content="{{descricao}}">
+  {{og_image}}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#FBF8F3">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="preload" href="fonts/fraunces-latin-soft-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/livvic-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  {{adobe}}
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.replace("no-js", "js");</script>
+  {{jsonld}}
+</head>
+<body>
+  <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+  {{aviso_preview}}
+
+  <header class="topo" id="topo">
+    <div class="topo__barra">
+      <a class="topo__marca" href="#inicio" aria-label="{{nome}} — início">
+        <picture>
+          <source srcset="img/logo.webp" type="image/webp">
+          <img src="img/logo.png" alt="{{nome}} — {{atuacao}}" width="505" height="146">
+        </picture>
+      </a>
+      <button class="topo__menu" type="button" aria-expanded="false" aria-controls="navegacao">
+        <span class="topo__menu-icone" aria-hidden="true"></span>
+        <span class="topo__menu-texto">Menu</span>
+      </button>
+      <nav class="topo__nav" id="navegacao" aria-label="Navegação principal">
+        <ul>
+          <li><a href="#apresentacao">Apresentação</a></li>
+          <li><a href="#atendimentos">Atendimentos</a></li>
+          <li><a href="#como-funciona">Como funciona</a></li>
+          <li><a href="#duvidas">Dúvidas</a></li>
+          <li class="topo__nav-contato"><a class="botao botao--leve" href="#contato">Contato</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="conteudo">
+
+    <!-- Início -->
+    <section class="inicio" id="inicio" aria-labelledby="inicio-titulo">
+      <div class="inicio__texto">
+        <p class="sobretitulo">Neuropsicopedagogia · 5 a 13 anos</p>
+        <h1 id="inicio-titulo">Compreender <em class="traco">como a criança aprende</em> é o primeiro passo para ajudá-la a avançar.</h1>
+        <p class="inicio__sub">
+          Sou Larissa Bueno, professora e neuropsicopedagoga. Realizo avaliação e intervenção
+          neuropsicopedagógica com crianças em idade pré-escolar e escolar: investigo as habilidades
+          envolvidas na leitura, na escrita, na matemática e na organização para aprender, e oriento
+          a família sobre os próximos passos.
+        </p>
+        <div class="inicio__acoes">
+          <a class="botao" href="{{cta_href}}"{{cta_attrs}}>{{cta_label}}</a>
+          <a class="link-seta" href="#atendimentos">Conhecer os atendimentos</a>
+        </div>
+      </div>
+      <div class="inicio__imagem">
+        {{foto_inicio}}
+      </div>
+    </section>
+
+    <!-- Apresentação -->
+    <section class="apresentacao {{apresentacao_classe}}" id="apresentacao" aria-labelledby="apresentacao-titulo">
+      <div class="moldura">
+        <p class="sobretitulo">Apresentação</p>
+        <h2 id="apresentacao-titulo">Meu trabalho é entender o que está por trás de uma dificuldade e transformar isso em um plano possível.</h2>
+
+        <div class="apresentacao__grade">
+          {{foto_apresentacao}}
+          <div class="apresentacao__texto">
+            <p class="destaque">
+              Quando uma família me procura, quase sempre chega com uma preocupação concreta:
+              a leitura que não engrena, a escrita que exige um esforço enorme, a matemática que
+              gera insegurança, a lição de casa que se arrasta.
+            </p>
+            <p>
+              Meu papel é olhar para essa queixa com cuidado, sem pressa de rotular, e compreender
+              quais habilidades estão envolvidas, o que a criança já consolidou e onde ela precisa
+              de apoio. Venho da educação: sou pedagoga, e é com esse olhar que conduzo a
+              neuropsicopedagogia.
+            </p>
+            <p>
+              A partir daí, organizo o trabalho com objetivos claros, registro a evolução sessão
+              a sessão e mantenho a família por perto. Quando faz sentido e os responsáveis
+              autorizam, converso também com a escola.
+            </p>
+          </div>
+
+          <dl class="ficha">
+            <div>
+              <dt>Atuação</dt>
+              <dd>Avaliação e intervenção neuropsicopedagógica; orientação às famílias</dd>
+            </div>
+            <div>
+              <dt>Público</dt>
+              <dd>Crianças de aproximadamente 5 a 13 anos e seus responsáveis</dd>
+            </div>
+            {{ficha_formacao}}
+            <div>
+              <dt>Atendimento</dt>
+              <dd>{{ficha_local}}</dd>
+            </div>
+            {{ficha_registro}}
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- Atendimentos -->
+    <section class="atendimentos" id="atendimentos" aria-labelledby="atendimentos-titulo">
+      <div class="moldura">
+        <header class="cabeca-secao">
+          <p class="sobretitulo">Atendimentos</p>
+          <h2 id="atendimentos-titulo">Três frentes de trabalho que se complementam</h2>
+          <p class="cabeca-secao__lead">
+            Cada família chega em um momento diferente. Algumas precisam primeiro entender o que está
+            acontecendo; outras já têm essa compreensão e buscam acompanhamento. O percurso é definido
+            em conversa com os responsáveis, de acordo com a demanda.
+          </p>
+        </header>
+
+        <article class="servico servico--avaliacao {{atendimento_classe}}" aria-labelledby="s-avaliacao">
+          <div class="servico__cabeca">
+            <span class="servico__num" aria-hidden="true">01</span>
+            <h3 id="s-avaliacao">Avaliação neuropsicopedagógica</h3>
+          </div>
+          <div class="servico__corpo">
+            <p>
+              Um processo de investigação das habilidades relacionadas à aprendizagem. Não parte de um
+              teste isolado: reúne a história de desenvolvimento da criança, o que a família e a escola
+              observam, a observação clínica durante as sessões e instrumentos escolhidos conforme a
+              idade e a demanda.
+            </p>
+            <h4 class="rotulo">O que é considerado</h4>
+            <ul class="lista-fina lista-fina--duas">
+              <li>História de desenvolvimento e trajetória escolar</li>
+              <li>As preocupações trazidas pela família</li>
+              <li>Informações da escola, quando autorizadas</li>
+              <li>Observação clínica nas sessões</li>
+              <li>Instrumentos e atividades pertinentes à demanda</li>
+              <li>O contexto e a rotina de aprendizagem da criança</li>
+            </ul>
+            <p>
+              Ao final, os responsáveis recebem uma devolutiva com o que foi observado, em linguagem
+              clara, com orientações e, quando for o caso, encaminhamentos.
+            </p>
+            <p class="nota">
+              A avaliação neuropsicopedagógica não é um diagnóstico médico ou psicológico. Quando a
+              investigação indica a necessidade de outro olhar profissional, isso é conversado com a
+              família e o encaminhamento é feito com cuidado.
+            </p>
+          </div>
+          {{foto_atendimento}}
+        </article>
+
+        <article class="servico servico--intervencao" aria-labelledby="s-intervencao">
+          <div class="servico__faixa">
+            <div class="servico__cabeca">
+              <span class="servico__num" aria-hidden="true">02</span>
+              <h3 id="s-intervencao">Intervenção neuropsicopedagógica</h3>
+            </div>
+            <div class="servico__corpo">
+              <p>
+                Acompanhamento organizado a partir das necessidades identificadas. Cada criança tem um
+                plano individual, com objetivos definidos por área e atividades pensadas para desenvolver
+                as habilidades que mais importam para a sua aprendizagem naquele momento.
+              </p>
+              <p>
+                O plano não é fixo. A evolução é registrada ao longo das sessões e, a cada seis meses,
+                o plano é revisto e apresentado aos responsáveis em uma reunião, podendo haver ajustes nos
+                objetivos ou na frequência.
+              </p>
+              <p>
+                Não trabalho com prazos fixos nem prometo resultados: cada criança tem o seu ritmo, e o
+                acompanhamento serve justamente para mostrar o que está avançando e o que precisa
+                de outra estratégia.
+              </p>
+            </div>
+            <aside class="servico__areas" aria-label="Exemplos de áreas trabalhadas">
+              <h4 class="rotulo">Algumas áreas que podem compor o plano</h4>
+              <p class="areas">
+                <span>Consciência fonológica</span> <span>Alfabetização</span> <span>Leitura e compreensão</span>
+                <span>Escrita</span> <span>Matemática</span> <span>Atenção</span>
+                <span>Funções executivas</span> <span>Memória</span> <span>Linguagem</span>
+                <span>Autonomia nos estudos</span>
+              </p>
+              <p class="areas__nota">As áreas são escolhidas a partir da avaliação, e não de um programa pronto.</p>
+            </aside>
+          </div>
+        </article>
+
+        <article class="servico servico--familias" aria-labelledby="s-familias">
+          <div class="servico__cabeca">
+            <span class="servico__num" aria-hidden="true">03</span>
+            <h3 id="s-familias">Orientação às famílias</h3>
+          </div>
+          <p class="servico__frase">
+            A criança passa a maior parte do tempo em casa e na escola, não nas sessões. Por isso, conversar
+            com quem convive com ela todos os dias faz parte do trabalho.
+          </p>
+          <div class="servico__duas">
+            <div>
+              <h4 class="rotulo">Em casa</h4>
+              <p>
+                Estratégias para a rotina de estudos, atividades possíveis no dia a dia e adaptações que
+                ajudem a criança a participar com mais autonomia, sempre de acordo com as necessidades dela
+                e com a realidade de cada família.
+              </p>
+            </div>
+            <div>
+              <h4 class="rotulo">Com a escola</h4>
+              <p>
+                Quando a demanda pede e os responsáveis autorizam, converso com a equipe pedagógica para
+                alinhar observações e estratégias. Nenhuma informação é compartilhada sem autorização.
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Como funciona -->
+    <section class="percurso" id="como-funciona" aria-labelledby="percurso-titulo">
+      <div class="moldura percurso__grade">
+        <header class="percurso__cabeca">
+          <p class="sobretitulo">Como funciona</p>
+          <h2 id="percurso-titulo">Um percurso possível, do primeiro contato ao acompanhamento</h2>
+          <p>
+            Nem toda família passa por todas as etapas. O caminho depende da demanda e da modalidade
+            combinada. A ideia aqui é você saber, desde já, o que esperar.
+          </p>
+        </header>
+        <ol class="etapas">
+          <li>
+            <h3>Primeiro contato</h3>
+            <p>Você me escreve contando, em linhas gerais, o que tem preocupado. Conversamos sobre disponibilidade, valores e se o meu trabalho faz sentido para a situação.</p>
+          </li>
+          <li>
+            <h3>Entrevista inicial</h3>
+            <p>Um encontro com os responsáveis para entender, com mais detalhe, a história da criança, a rotina, a vida escolar e as preocupações.</p>
+          </li>
+          <li>
+            <h3>Avaliação <span class="etapa__cond">quando indicada</span></h3>
+            <p>Sessões com a criança para investigar as habilidades envolvidas na aprendizagem.</p>
+          </li>
+          <li>
+            <h3>Devolutiva</h3>
+            <p>Apresento aos responsáveis o que foi observado, com orientações e, se for o caso, encaminhamentos.</p>
+          </li>
+          <li>
+            <h3>Planejamento <span class="etapa__cond">quando pertinente</span></h3>
+            <p>Se houver indicação de intervenção ou de orientação continuada, definimos juntos os objetivos e a frequência dos encontros.</p>
+          </li>
+          <li>
+            <h3>Acompanhamento</h3>
+            <p>A evolução é registrada nas sessões e o plano é revisto com a família a cada seis meses, ou conforme a necessidade.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Para quem -->
+    <section class="para-quem" id="para-quem" aria-labelledby="para-quem-titulo">
+      <div class="moldura">
+        <header class="cabeca-secao">
+          <p class="sobretitulo">Para quem é</p>
+          <h2 id="para-quem-titulo">Quando pode fazer sentido procurar</h2>
+          <p class="cabeca-secao__lead">Algumas situações costumam levar as famílias a buscar uma conversa:</p>
+        </header>
+        <ul class="lista-fina lista-fina--duas lista-fina--grande">
+          <li>Dificuldade persistente para aprender a ler ou para compreender o que lê</li>
+          <li>Escrita com muitas trocas e omissões, ou que exige um esforço muito grande</li>
+          <li>Dificuldade em matemática que se mantém mesmo com apoio</li>
+          <li>Dificuldade para manter a atenção durante as atividades de estudo</li>
+          <li>Pouca organização para iniciar, planejar e concluir tarefas</li>
+          <li>Diferença entre o que a criança parece saber e o que consegue demonstrar na escola</li>
+          <li>Indicação da escola ou de outro profissional para investigar a aprendizagem</li>
+          <li>Desejo de orientação para apoiar os estudos em casa</li>
+        </ul>
+        <aside class="ponderacao">
+          <svg class="sol" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="24" cy="24" r="8.5"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M9.9 9.9l4.2 4.2M33.9 33.9l4.2 4.2M9.9 38.1l4.2-4.2M33.9 14.1l4.2-4.2"/></g></svg>
+          <p>
+            <strong>Uma dificuldade isolada não significa, por si só, que a criança precise de avaliação.</strong>
+            Toda criança passa por fases mais difíceis. O que costuma chamar atenção é a persistência, a
+            intensidade e o impacto na rotina, e mesmo assim a melhor forma de decidir é conversar. No primeiro
+            contato, posso ajudar você a entender se este é o caminho ou se outro profissional seria mais indicado.
+          </p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Modo de trabalhar -->
+    <section class="modo" id="modo-de-trabalhar" aria-labelledby="modo-titulo">
+      <div class="moldura">
+        <header class="cabeca-secao">
+          <p class="sobretitulo">Meu modo de trabalhar</p>
+          <h2 id="modo-titulo">Princípios que aparecem em cada etapa</h2>
+        </header>
+        <div class="principios">
+          <div class="principio">
+            <h3>Cada criança, um plano</h3>
+            <p>O ponto de partida é o que a avaliação e a observação mostraram sobre aquela criança.</p>
+            <p class="na-pratica"><span>Na prática</span> os objetivos são escritos a partir das necessidades identificadas, e não de um roteiro igual para todos.</p>
+          </div>
+          <div class="principio">
+            <h3>Objetivos claros</h3>
+            <p>A família precisa saber o que está sendo trabalhado e por quê.</p>
+            <p class="na-pratica"><span>Na prática</span> o plano é organizado por áreas, cada uma com objetivos definidos, que eu apresento e explico aos responsáveis.</p>
+          </div>
+          <div class="principio">
+            <h3>Evolução acompanhada</h3>
+            <p>Avanço não se presume: se observa e se registra.</p>
+            <p class="na-pratica"><span>Na prática</span> cada sessão é registrada, e o que foi alcançado é revisto periodicamente para ajustar o plano.</p>
+          </div>
+          <div class="principio">
+            <h3>Diálogo com a família</h3>
+            <p>Os responsáveis são parceiros do processo, não apenas espectadores.</p>
+            <p class="na-pratica"><span>Na prática</span> reuniões semestrais de acompanhamento, orientações para o dia a dia e conversa com a escola quando autorizada.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Local -->
+    <section class="local" id="local" aria-labelledby="local-titulo">
+      <div class="moldura local__grade">
+        <div>
+          <p class="sobretitulo">Local de atendimento</p>
+          <h2 id="local-titulo">Onde atendo</h2>
+        </div>
+        <div class="local__texto">
+          {{local_texto}}
+        </div>
+      </div>
+    </section>
+
+    <!-- Dúvidas -->
+    <section class="duvidas" id="duvidas" aria-labelledby="duvidas-titulo">
+      <div class="moldura duvidas__grade">
+        <header>
+          <p class="sobretitulo">Perguntas frequentes</p>
+          <h2 id="duvidas-titulo">Dúvidas comuns antes de começar</h2>
+        </header>
+        <div class="perguntas">
+          <details>
+            <summary>Qual é a diferença entre avaliação e intervenção neuropsicopedagógica?</summary>
+            <p>A avaliação é um período de investigação, com começo, meio e fim: busca compreender como a criança aprende e quais habilidades precisam de apoio. A intervenção é o acompanhamento contínuo que pode vir depois, quando indicado, com objetivos definidos a partir do que foi observado.</p>
+          </details>
+          <details>
+            <summary>Como saber se devo procurar uma avaliação?</summary>
+            <p>Se uma dificuldade persiste mesmo com apoio em casa e na escola, e está afetando a rotina ou a confiança da criança, vale conversar. Nem sempre a resposta será uma avaliação: às vezes, uma orientação ou o encaminhamento para outro profissional é o mais adequado.</p>
+          </details>
+          <details>
+            <summary>Como funciona o primeiro contato?</summary>
+            <p>{{canal_maiusculo}}. Você conta, em poucas linhas, o que tem preocupado e a idade da criança. Não é preciso enviar laudos, documentos ou informações de saúde nesse momento. Na resposta, envio as informações sobre disponibilidade, valores e próximos passos.</p>
+          </details>
+          <details>
+            <summary>A escola pode participar do processo?</summary>
+            <p>Sim, quando a demanda pede e os responsáveis autorizam. A troca com a escola ajuda a alinhar observações e estratégias. Nenhuma informação sobre a criança é compartilhada sem autorização.</p>
+          </details>
+          <details>
+            <summary>Quanto tempo dura o atendimento?</summary>
+            <p>Depende da modalidade e de cada criança. A avaliação tem um número de sessões definido conforme a demanda. A intervenção não tem prazo fixo: o plano é revisto com a família a cada seis meses, e é nessas revisões que se decide sobre continuidade, frequência e objetivos.</p>
+          </details>
+          <details>
+            <summary>A neuropsicopedagogia substitui o acompanhamento médico ou psicológico?</summary>
+            <p>Não. A neuropsicopedagogia investiga e trabalha as habilidades ligadas à aprendizagem e não faz diagnóstico médico ou psicológico. Quando a criança já é acompanhada por outros profissionais, o trabalho pode acontecer em diálogo com eles, com autorização da família.</p>
+          </details>
+          <details>
+            <summary>Como consultar valores e disponibilidade?</summary>
+            <p>{{canal_maiusculo}}. Os valores variam conforme a modalidade e são informados no primeiro contato, junto com os horários disponíveis.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contato -->
+    <section class="contato" id="contato" aria-labelledby="contato-titulo">
+      <svg class="contato__sol" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round"><circle cx="200" cy="200" r="96"/><path d="M200 24v40M200 336v40M24 200h40M336 200h40M75.5 75.5l28.3 28.3M296.2 296.2l28.3 28.3M75.5 324.5l28.3-28.3M296.2 103.8l28.3-28.3"/></g></svg>
+      <div class="moldura contato__grade">
+        <div>
+          <p class="sobretitulo">Contato</p>
+          <h2 id="contato-titulo">Vamos conversar?</h2>
+          <p class="contato__lead">
+            Se você tem uma preocupação com a aprendizagem do seu filho ou da sua filha, me escreva.
+            A primeira conversa serve para entender a situação e ver, juntos, qual é o caminho mais adequado.
+          </p>
+        </div>
+        <div class="contato__acao">
+          {{contato_principal}}
+          <p class="contato__privacidade">
+            Para preservar a privacidade da criança, não é necessário enviar nome completo, laudos ou
+            informações de saúde na primeira mensagem.
+          </p>
+          {{contatos_extra}}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <div class="moldura rodape__grade">
+      <div class="rodape__marca">
+        <p class="rodape__nome">{{nome}}</p>
+        <p>{{atuacao}}<br>Avaliação e intervenção neuropsicopedagógica</p>
+        {{rodape_registro}}
+      </div>
+      <nav aria-label="Navegação do rodapé">
+        <ul>
+          <li><a href="#apresentacao">Apresentação</a></li>
+          <li><a href="#atendimentos">Atendimentos</a></li>
+          <li><a href="#como-funciona">Como funciona</a></li>
+          <li><a href="#duvidas">Dúvidas</a></li>
+          <li><a href="#contato">Contato</a></li>
+        </ul>
+      </nav>
+      <div>
+        {{rodape_contatos}}
+        <p><a href="privacidade.html">Política de privacidade</a></p>
+      </div>
+    </div>
+    <div class="moldura rodape__base">
+      <p>© {{ano}} {{nome}}. As informações deste site têm caráter informativo e não substituem uma avaliação profissional individual.</p>
+    </div>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>

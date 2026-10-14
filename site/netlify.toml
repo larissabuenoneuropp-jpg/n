@@ -1,0 +1,8 @@
+# Site institucional (separado do NeuroPlanner). No Netlify, crie um site novo a partir deste
+# repositório e defina "Base directory" = site. O Netlify lê este arquivo a partir daí.
+[build]
+  command = "node build.mjs"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
