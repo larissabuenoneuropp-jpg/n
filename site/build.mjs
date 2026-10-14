@@ -192,7 +192,7 @@ const raios = `<svg class="inicio__raios" viewBox="0 0 72 72" aria-hidden="true"
 
 const composicao = `<svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
           <rect width="400" height="500" fill="#e4efee"/>
-          <g stroke="#e6c983" stroke-width="7" stroke-linecap="round">${Array.from({ length: 12 }, (_, k) => {
+          <g class="sol-nascente"><g class="sol-raios" stroke="#e6c983" stroke-width="7" stroke-linecap="round">${Array.from({ length: 12 }, (_, k) => {
             const a = (k * 30 * Math.PI) / 180;
             const p = (r) => [(200 + r * Math.cos(a)).toFixed(1), (250 + r * Math.sin(a)).toFixed(1)];
             const [x1, y1] = p(92);
@@ -200,9 +200,9 @@ const composicao = `<svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid sli
             return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
           }).join("")}</g>
           <path d="M243 205a62 62 0 1 0 12 72" fill="none" stroke="#daa47f" stroke-width="10" stroke-linecap="round"/>
-          <path d="M200 286c-30-22-42-44-30-60 10-13 26-10 30 6 4-16 20-19 30-6 12 16 0 38-30 60z" fill="none" stroke="#c98b66" stroke-width="7" stroke-linejoin="round"/>
-          <path d="M0 352c70-30 150-34 220-14s130 18 180-6v168H0z" fill="#d3d7c6"/>
-          <path d="M0 410c90-36 190-30 260-6 54 18 100 16 140 2v94H0z" fill="#b9bea7"/>
+          <path d="M200 286c-30-22-42-44-30-60 10-13 26-10 30 6 4-16 20-19 30-6 12 16 0 38-30 60z" fill="none" stroke="#c98b66" stroke-width="7" stroke-linejoin="round"/></g>
+          <path class="colina colina--fundo" d="M0 352c70-30 150-34 220-14s130 18 180-6v168H0z" fill="#d3d7c6"/>
+          <path class="colina colina--frente" d="M0 410c90-36 190-30 260-6 54 18 100 16 140 2v94H0z" fill="#b9bea7"/>
         </svg>`;
 
 const fotoInicio = foto("inicio", { sizes: "(min-width: 900px) 31rem, 90vw", prioridade: true });
