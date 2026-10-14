@@ -24,7 +24,9 @@ for f in "${arquivos[@]}"; do
   largura=$(identify -format "%w" "$destino/$nome.jpg")
   for w in 800 1400; do
     # só gera a cópia se a original for maior (senão o tamanho declarado no site seria falso)
-    [ "$largura" -gt "$w" ] && convert "$destino/$nome.jpg" -resize "${w}x" -quality 78 "$destino/$nome-$w.webp"
+    if [ "$largura" -gt "$w" ]; then
+      convert "$destino/$nome.jpg" -resize "${w}x" -quality 78 "$destino/$nome-$w.webp"
+    fi
   done
   echo "ok  $nome  ($(du -h "$destino/$nome.jpg" | cut -f1) jpg)"
 done
