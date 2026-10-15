@@ -15,6 +15,7 @@ import { formatBRL } from "@/lib/finance/money";
 import { buildSheetImport, contractsFromMonth, existingImportKeys, guessColumns, normalizeName, parseCSV, parseOFX, parseSessionsSheet, reconcile, rowsToStatement, type ColumnMap, type ReconcileResult, type SheetMonth } from "@/lib/finance/importers";
 import { gridFromWorksheet } from "@/lib/finance/excel-grid";
 import { downloadBlob, uid } from "@/lib/utils";
+import { STANDALONE } from "@/lib/finance/runtime";
 
 type Tab = "geral" | "importar" | "backup" | "historico";
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -348,7 +349,9 @@ function SettingsInner() {
             <div className="space-y-3 p-5 text-sm">
               <Button onClick={exportAll}><FileSpreadsheet className="h-4 w-4" /> Excel completo do financeiro</Button>
               <p className="text-xs text-ink-faint">Lançamentos, contratos, recorrentes, reservas, saldos, compras, DRE e projeção. Contém dados financeiros: guarde em local seguro.</p>
-              <p className="text-xs text-ink-soft">O backup completo do sistema (criptografado, inclui o financeiro) fica em <Link className="text-brand-700 underline" href="/configuracoes?tab=seguranca">Configurações › Segurança</Link>. Faça um por semana.</p>
+              {STANDALONE
+                ? <p className="text-xs text-ink-soft">Seus dados ficam no <b>arquivo de dados criptografado</b> que você abriu. Para backup, copie esse arquivo para um pendrive ou HD externo (ele só abre com a sua senha). Faça uma cópia por semana.</p>
+                : <p className="text-xs text-ink-soft">O backup completo do sistema (criptografado, inclui o financeiro) fica em <Link className="text-brand-700 underline" href="/configuracoes?tab=seguranca">Configurações › Segurança</Link>. Faça um por semana.</p>}
             </div>
           </Card>
           <Card>

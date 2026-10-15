@@ -14,6 +14,7 @@ import { formatBRL, fromCents, toCents } from "@/lib/finance/money";
 import { contractMonthlyRevenue, workCalendar } from "@/lib/finance/projection";
 import { SERVICE_TYPES } from "@/lib/finance/categories";
 import { downloadBlob } from "@/lib/utils";
+import { STANDALONE } from "@/lib/finance/runtime";
 
 type Tab = "lancamentos" | "contratos" | "prevista";
 
@@ -43,7 +44,7 @@ function ContractForm({ open, initial, onClose, onSave, patients, anonymize }: {
         {err.length > 0 && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{err.map((x) => <p key={x}>{x}</p>)}</div>}
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Identificador" hint="Iniciais ou código; é o que aparece nos relatórios."><Input value={f.label ?? ""} onChange={(e) => set({ label: e.target.value })} maxLength={40} /></Field>
-          <Field label="Paciente (opcional)"><Select value={f.patient_id ?? ""} onChange={(e) => set({ patient_id: e.target.value || null })} placeholder="—" options={patients.map((p) => ({ value: p.id, label: anonymize ? initialsLabel(p.name) : p.name }))} /></Field>
+          {!STANDALONE && <Field label="Paciente (opcional)"><Select value={f.patient_id ?? ""} onChange={(e) => set({ patient_id: e.target.value || null })} placeholder="—" options={patients.map((p) => ({ value: p.id, label: anonymize ? initialsLabel(p.name) : p.name }))} /></Field>}
           <Field label="Serviço"><Select value={f.service_type ?? "Sessão avulsa"} onChange={(e) => set({ service_type: e.target.value })} options={SERVICE_TYPES} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -188,7 +189,7 @@ function RevenueInner() {
             <Select className="w-44" value={status} onChange={(e) => setStatus(e.target.value)} placeholder="Todos os status" options={[{ value: "previsto", label: "Previsto" }, { value: "aberto", label: "A receber" }, { value: "atrasado", label: "Atrasado (todos os meses)" }, { value: "quitado", label: "Recebido" }, { value: "cancelado", label: "Cancelado" }]} />
             <Input className="w-52" placeholder="Buscar pagador ou serviço" value={q} onChange={(e) => setQ(e.target.value)} />
             <Button variant="secondary" size="sm" className="h-9" onClick={generateFromContracts}><Wand2 className="h-4 w-4" /> Gerar previstos dos contratos</Button>
-            <Button variant="secondary" size="sm" className="h-9" onClick={billFromAgenda}><CalendarCheck className="h-4 w-4" /> Lançar sessões da agenda</Button>
+            {!STANDALONE && <Button variant="secondary" size="sm" className="h-9" onClick={billFromAgenda}><CalendarCheck className="h-4 w-4" /> Lançar sessões da agenda</Button>}
           </div>
           <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
             <Kpi label="Faturado no mês" value={formatBRL(led?.grossBilled ?? 0)} hint={led?.discounts ? `Descontos: ${formatBRL(led.discounts)}` : undefined} />

@@ -245,7 +245,9 @@ export function FinChart({ data, xKey, series, format = compactBRL, tooltipForma
         </div>
         <Segmented value={view} onChange={setView} options={[{ value: "chart", label: "Gráfico" }, { value: "table", label: "Tabela" }]} />
       </div>
-      {view === "table" ? (
+      {!vals.some((v) => v !== 0) ? (
+        <p className="flex items-center justify-center rounded-lg bg-canvas text-xs text-ink-faint" style={{ height: Math.min(height, 160) }}>Sem dados ainda — os lançamentos aparecem aqui.</p>
+      ) : view === "table" ? (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-ink-faint">

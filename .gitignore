@@ -10,3 +10,6 @@ next-env.d.ts
 
 # Certificado HTTPS do uso local (gerado em cada computador)
 .local-https
+
+# Compilação intermediária do app independente (o arquivo final fica em financeiro-offline/release)
+financeiro-offline/dist

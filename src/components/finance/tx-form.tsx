@@ -9,6 +9,7 @@ import { monthOf } from "@/lib/finance/calendar";
 import { fromCents, toCents, formatBRL } from "@/lib/finance/money";
 import type { FinanceSettings } from "@/lib/finance/settings";
 import type { DataStore } from "@/lib/data/store";
+import { STANDALONE } from "@/lib/finance/runtime";
 
 export type TxDraft = Partial<Transaction>;
 
@@ -107,10 +108,10 @@ export function TxForm({
 
         {type === "receita" && (
           <>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Paciente (opcional)">
+            <div className={STANDALONE ? "grid gap-3 sm:grid-cols-2" : "grid gap-3 sm:grid-cols-3"}>
+              {!STANDALONE && <Field label="Paciente (opcional)">
                 <Select value={f.patient_id ?? ""} onChange={(e) => set({ patient_id: e.target.value || null })} placeholder="—" options={patients.map((p) => ({ value: p.id, label: settings.anonymize ? initialsLabel(p.name) : p.name }))} />
-              </Field>
+              </Field>}
               <Field label="Identificador do pagador" hint="Ex.: iniciais ou código. Evite dados clínicos.">
                 <Input value={f.payer_label ?? ""} onChange={(e) => set({ payer_label: e.target.value })} maxLength={40} />
               </Field>

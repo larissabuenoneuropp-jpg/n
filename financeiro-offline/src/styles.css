@@ -1,0 +1,9 @@
+/* Mesmo visual do NeuroPlanner, sem fontes da internet (usa as fontes do sistema). */
+@import "../../src/app/globals.css";
+@source "../../src";
+@source "./";
+
+:root {
+  --font-dm-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display-fallback: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+}

@@ -126,6 +126,10 @@ Navegadores: o Tailwind 4 exige versões atuais (Chrome/Edge 111+, Safari 16.4+,
 - **Gestão financeira:** cálculos gerenciais, não substituem o contador nem o Carnê-Leão Web. Regras sem confirmação do contador aparecem marcadas e, por padrão, usam a opção conservadora.
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.
 
+## Meu Financeiro — app financeiro independente e sem internet
+
+Para usar só a gestão financeira, sem o NeuroPlanner, sem servidor e sem internet: `financeiro-offline/release/MeuFinanceiro.html` — um único arquivo que abre com dois cliques e guarda os dados num arquivo criptografado escolhido por você. Instruções em `financeiro-offline/LEIA-ME.md`.
+
 ## Usar só no meu computador, em HTTPS (recomendado para dados reais)
 
 O sistema roda no seu próprio computador, sem site publicado, no endereço **https://localhost:3000**. O servidor só aceita conexões do próprio computador — nenhum outro aparelho, nem na mesma rede Wi-Fi, consegue abrir. Os dados continuam criptografados no navegador.

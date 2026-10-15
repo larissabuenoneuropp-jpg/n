@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, useToast } from "@/components/ui";
@@ -52,7 +53,7 @@ export default function BudgetPage() {
       <PageHeader title="Orçamento disponível" subtitle={`Quanto posso gastar em ${monthLongLabel(a.currentMonth)} sem comprometer a saúde financeira?`} />
 
       {b.freeCash === null ? (
-        <Card className="mb-4 p-5 text-sm text-ink-soft">Informe o saldo bancário em <a className="text-brand-700 underline" href="/financeiro/fluxo">Fluxo de caixa</a> para calcular o orçamento. Sem ele, qualquer número seria um palpite.</Card>
+        <Card className="mb-4 p-5 text-sm text-ink-soft">Informe o saldo bancário em <Link className="text-brand-700 underline" href="/financeiro/fluxo">Fluxo de caixa</Link> para calcular o orçamento. Sem ele, qualquer número seria um palpite.</Card>
       ) : b.committedInBank > 0 && (
         <div className="mb-4 rounded-lg border border-line bg-white px-4 py-3 text-sm text-ink-soft">
           Dos <b>{formatBRL(a.cash.amount)}</b> que estão na conta, <b>{formatBRL(b.committedInBank)}</b> já estão comprometidos com contas, tributos, pró-labore, reservas e saldo mínimo — <b>não estão disponíveis para novos gastos</b>.
