@@ -9,7 +9,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "security:check": "node scripts/check-secrets.mjs && npm audit --omit=dev",
-    "test": "vitest run"
+    "test": "vitest run",
+    "local": "node scripts/local.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

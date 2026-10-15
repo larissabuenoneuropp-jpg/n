@@ -7,6 +7,10 @@ const PUBLIC_PATHS = ["/login", "/auth"];
 export async function middleware(request: NextRequest) {
   // Força HTTPS em produção (o Netlify informa o protocolo original em x-forwarded-proto)
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(request.nextUrl.hostname);
+  // Modo "só neste computador": páginas só respondem pelo endereço do próprio computador
+  if (process.env.LOCAL_ONLY === "1" && !/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(request.headers.get("host") ?? "")) {
+    return new NextResponse("Acesso permitido só neste computador.", { status: 403 });
+  }
   if (process.env.NODE_ENV === "production" && !local && request.headers.get("x-forwarded-proto") === "http") {
     const url = request.nextUrl.clone();
     url.protocol = "https:";

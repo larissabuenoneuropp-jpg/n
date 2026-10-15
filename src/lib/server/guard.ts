@@ -127,8 +127,15 @@ export function serverLockReason() {
   return `A APP_ACCESS_KEY cadastrada no Netlify tem ${k.length} caracteres; o mínimo é 24. Gere uma chave em Configurações → Segurança → "Gerar uma chave forte", troque o valor no Netlify e publique de novo.`;
 }
 
+/**
+ * Modo "só neste computador" (npm run local / atalhos Abrir-NeuroPlanner): o servidor escuta apenas
+ * 127.0.0.1, então nenhum outro aparelho consegue se conectar — a chave APP_ACCESS_KEY não é necessária.
+ */
+export const isLocalOnly = () => process.env.LOCAL_ONLY === "1";
+const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
 export function personalServerLocked() {
-  return isPersonalMode && process.env.NODE_ENV === "production" && accessKey().length < 24;
+  return isPersonalMode && process.env.NODE_ENV === "production" && !isLocalOnly() && accessKey().length < 24;
 }
 
 export const deny = (status: number, error: string, extra?: Record<string, unknown>) =>
@@ -138,6 +145,8 @@ type GuardResult = { ok: true; userKey: string; email?: string } | { ok: false; 
 
 export async function guard(req: Request, opts: { bucket: string; limit: number; windowMs?: number }): Promise<GuardResult> {
   const windowMs = opts.windowMs ?? 60_000;
+  // Só neste computador: recusa qualquer nome de host que não seja o próprio computador (ex.: DNS rebinding)
+  if (isLocalOnly() && !LOOPBACK_HOST.test(req.headers.get("host") ?? "")) return { ok: false, response: deny(403, "Acesso permitido só neste computador.") };
   const ip = clientIp(req);
   if (await rateLimited(`${opts.bucket}:ip:${ip}`, opts.limit * 2, windowMs)) return { ok: false, response: deny(429, "Muitas solicitações. Aguarde um minuto.") };
   if (!sameOrigin(req)) return { ok: false, response: deny(403, "Origem não permitida.") };

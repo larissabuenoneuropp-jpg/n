@@ -117,22 +117,27 @@ describe("extratos e planilhas genéricas", () => {
 // Teste opcional com a planilha real (não versionada): NP_SHEET=/caminho/arquivo.xlsx npx vitest run
 const real = process.env.NP_SHEET;
 describe.skipIf(!real)("planilha real (local)", () => {
-  it("importa todos os meses e reproduz os totais conferidos na análise", async () => {
+  it("importa todos os meses e reproduz os totais da própria planilha", async () => {
     const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.readFile(real!);
     const months = wb.worksheets.map((ws) => parseSessionsSheet(gridFromWorksheet(ws as never))).filter(Boolean) as NonNullable<ReturnType<typeof parseSessionsSheet>>[];
     const plan = buildSheetImport(months, [], { today: "2026-10-15", anonymize: true, includeFuture: false, patients: [], existingKeys: new Set() });
-    const sumBy = (m: string, type: "receita" | "despesa") => [...plan.revenues, ...plan.expenses].filter((t) => t.type === type && t.competence === m).reduce((s, t) => s + (t.amount ?? 0), 0);
     const round = (v: number) => Math.round(v * 100) / 100;
-    // Valores recalculados na análise (docs/financeiro/01-analise-das-planilhas.md)
-    expect(round(sumBy("2026-02", "receita"))).toBe(3704.16);
-    expect(round(sumBy("2026-05", "receita"))).toBe(10851.4);
-    expect(round(sumBy("2026-02", "despesa"))).toBe(911.41);
-    expect(round(sumBy("2026-05", "despesa"))).toBe(3365.93);
-    expect(round(sumBy("2026-09", "despesa"))).toBe(2758.43);
-    expect(round(sumBy("2026-10", "receita"))).toBe(8402.6);
+    // Sem valores reais no código: confere a importação contra a própria planilha lida
+    for (const m of months.filter((x) => x.competence <= "2026-10")) {
+      const imported = (type: "receita" | "despesa") => round([...plan.revenues, ...plan.expenses].filter((t) => t.type === type && t.competence === m.competence).reduce((s, t) => s + (t.amount ?? 0), 0));
+      const sheetRevenue = round(m.patients.reduce((s, p) => s + (p.total && p.total > 0 ? p.total : 0), 0));
+      const sheetExpenses = round(m.expenses.reduce((s, e) => s + e.value, 0));
+      expect(imported("receita")).toBe(sheetRevenue);
+      expect(imported("despesa")).toBe(sheetExpenses);
+    }
+    // Totais esperados opcionais, guardados fora do repositório: NP_SHEET_EXPECTED='{"2026-05":{"receita":0,"despesa":0}}'
+    const expected = process.env.NP_SHEET_EXPECTED ? (JSON.parse(process.env.NP_SHEET_EXPECTED) as Record<string, { receita: number; despesa: number }>) : {};
+    for (const [m, v] of Object.entries(expected)) {
+      expect(round([...plan.revenues].filter((t) => t.competence === m).reduce((s, t) => s + (t.amount ?? 0), 0))).toBe(v.receita);
+      expect(round([...plan.expenses].filter((t) => t.competence === m).reduce((s, t) => s + (t.amount ?? 0), 0))).toBe(v.despesa);
+    }
     expect(plan.revenues.every((t) => !String(t.payer_label).match(/[a-z]{3,}/))).toBe(true); // anonimizado
-    console.log(JSON.stringify({ labels: Object.values(plan.labels), issues: plan.issues.length, skipped: plan.skipped.map((s) => s.reason) }));
   });
 });

@@ -126,6 +126,21 @@ Navegadores: o Tailwind 4 exige versões atuais (Chrome/Edge 111+, Safari 16.4+,
 - **Gestão financeira:** cálculos gerenciais, não substituem o contador nem o Carnê-Leão Web. Regras sem confirmação do contador aparecem marcadas e, por padrão, usam a opção conservadora.
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.
 
+## Usar só no meu computador (recomendado para dados reais)
+
+O sistema roda no seu próprio computador, sem site publicado: o servidor só aceita conexões do próprio computador (endereço 127.0.0.1) — nenhum outro aparelho, nem na mesma rede Wi-Fi, consegue abrir. Os dados continuam criptografados no navegador.
+
+1. Instale o **Node.js 22 (LTS)** em https://nodejs.org (uma vez).
+2. Baixe o projeto (GitHub › Code › Download ZIP) e descompacte numa pasta sua.
+3. **Windows:** dois cliques em `Abrir-NeuroPlanner.bat`. **Mac:** clique com o botão direito em `Abrir-NeuroPlanner.command` › Abrir (na primeira vez o macOS pede confirmação). Ou, no Terminal, dentro da pasta: `npm run local`.
+4. Na primeira vez ele instala e prepara o sistema (alguns minutos). Depois abre `http://localhost:3000` no navegador. Para fechar, feche a janela preta.
+
+Observações:
+- Use sempre o **mesmo navegador** e o endereço `http://localhost:3000`: os dados ficam guardados para esse endereço. Dados de um site publicado (Netlify) **não aparecem** aqui automaticamente — exporte o backup lá (Configurações › Segurança › Exportar meus dados) e restaure aqui (Configurações › Segurança › Restaurar backup).
+- A IA funciona localmente sem a chave `APP_ACCESS_KEY`; para a IA real, crie um arquivo `.env.local` na pasta com `OPENAI_API_KEY=...` (opcional — sem ela, respostas de exemplo).
+- Atualizar o sistema: baixe a versão nova e abra pelo mesmo atalho (ele recompila sozinho). Seus dados ficam no navegador, não na pasta.
+- Faça backup semanal: se o navegador for limpo ou o computador trocado, só o backup recupera os dados.
+
 ## Uso pessoal, sem login (padrão sem Supabase)
 
 Sem as variáveis do Supabase, o NeuroPlanner **não pede conta nem e-mail**: no primeiro acesso você cria a **senha do cofre**, que criptografa os dados neste computador. O sistema começa vazio para você colocar os próprios dados.
