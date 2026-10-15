@@ -283,16 +283,164 @@ export interface DocumentFile extends Base {
   notes?: string;
 }
 
+export type TxType = "receita" | "despesa" | "retirada";
+/** Status gravado. "Recebido/pago" e "atrasado" são derivados de paid_at e due_date (ver lib/finance/ledger). */
+export type TxStatus = "previsto" | "faturado" | "cancelado";
+/** Natureza do gasto para o DRE gerencial e o planejamento. */
+export type CostNature = "fixo" | "variavel" | "extraordinario" | "investimento" | "tributo" | "pessoal";
+/** Classificação fiscal segundo a orientação do contador. "a_confirmar" nunca é deduzido. */
+export type TaxClass = "dedutivel" | "nao_dedutivel" | "investimento" | "a_confirmar" | "pessoal";
+/** Quem paga: pessoa física (Carnê-Leão) ou jurídica (ex.: plano de saúde). */
+export type PayerKind = "pf" | "pj" | "a_confirmar";
+
+/**
+ * Lançamento financeiro. Os campos depois de `method` são do módulo de gestão financeira e
+ * todos opcionais, para manter compatíveis os lançamentos antigos.
+ */
 export interface Transaction extends Base {
   patient_id?: ID | null;
   appointment_id?: ID | null;
-  type: "receita" | "despesa";
+  /** "retirada" = pró-labore/retirada pessoal: sai do caixa, mas não é despesa do consultório. */
+  type: TxType;
   category: string;
   description?: string;
+  /** Valor final (já com desconto). */
   amount: number;
   due_date: string;
   paid_at?: string | null;
   method?: string;
+  status?: TxStatus | null;
+  /** Data do atendimento / do fato gerador (competência). */
+  service_date?: string | null;
+  /** Mês de competência "AAAA-MM" (se vazio: mês do atendimento ou do vencimento). */
+  competence?: string | null;
+  /** Sessões cobradas, sessões realizadas e faltas (para ocupação e taxa de presença). */
+  sessions?: number | null;
+  sessions_done?: number | null;
+  absences?: number | null;
+  replacements?: number | null;
+  unit_amount?: number | null;
+  discount?: number | null;
+  service_type?: string | null;
+  payer_kind?: PayerKind | null;
+  /** Identificador do pagador/paciente (pode ser anônimo, ex.: "AC-1"). */
+  payer_label?: string | null;
+  invoice_status?: "nao_aplica" | "pendente" | "emitida" | null;
+  invoice_number?: string | null;
+  /** IR retido na fonte por pessoa jurídica pagadora. */
+  irrf_withheld?: number | null;
+  nature?: CostNature | null;
+  tax_class?: TaxClass | null;
+  withdrawal_kind?: "pro_labore" | "distribuicao" | "adicional" | null;
+  recurring_id?: ID | null;
+  contract_id?: ID | null;
+  plan_id?: ID | null;
+  proof?: Attachment | null;
+  notes?: string | null;
+  /** Chave de importação (evita importar a mesma linha duas vezes). */
+  import_key?: string | null;
+  /** Valor estimado (não confirmado). */
+  estimated?: boolean | null;
+  /** Datas estimadas (ex.: a planilha não registra o dia do recebimento). */
+  dates_estimated?: boolean | null;
+}
+
+/** Contrato/pacote recorrente de atendimento — base da receita prevista. */
+export interface FinContract extends Base {
+  label: string;
+  patient_id?: ID | null;
+  service_type: string;
+  billing: "por_sessao" | "pacote_mensal";
+  sessions_per_week: number;
+  /** Valor recebido por sessão (já líquido do desconto do convênio, se houver). */
+  unit_amount: number;
+  monthly_amount?: number | null;
+  payer_kind: PayerKind;
+  /** Recebimento no mesmo mês do atendimento ou no mês seguinte. */
+  payment_timing: "mesmo_mes" | "mes_seguinte";
+  payment_day?: number | null;
+  start_date: string;
+  end_date?: string | null;
+  /** Falta é cobrada? (pacotes costumam cobrar) */
+  charges_absences: boolean;
+  /** Taxa de presença esperada (0–1); vazio = usa a do histórico/cenário. */
+  attendance_rate?: number | null;
+  active: boolean;
+  notes?: string;
+}
+
+/** Despesa recorrente (mensal, anual ou por sessão), com início e fim (ex.: cursos). */
+export interface FinRecurring extends Base {
+  description: string;
+  category: string;
+  amount: number;
+  basis: "mensal" | "anual" | "por_sessao";
+  day_of_month?: number | null;
+  /** Mês (1–12) de cobrança das despesas anuais. */
+  month_of_year?: number | null;
+  start_date: string;
+  end_date?: string | null;
+  nature: CostNature;
+  tax_class: TaxClass;
+  /** Reajuste anual (%) aplicado a partir do mês indicado. */
+  adjust_pct?: number | null;
+  adjust_month?: number | null;
+  active: boolean;
+  estimated: boolean;
+  notes?: string;
+}
+
+export type ReserveKind = "emergencia" | "anuais" | "ferias" | "equipamentos" | "investimentos" | "distribuicao" | "outra";
+
+export interface ReserveMovement {
+  id: ID;
+  date: string;
+  /** Positivo = aporte; negativo = uso. */
+  amount: number;
+  note?: string;
+}
+
+/** Conta gerencial (dinheiro separado no caixa para um fim). Impostos e capital de giro são automáticos. */
+export interface FinReserve extends Base {
+  kind: ReserveKind;
+  name: string;
+  target_mode: "valor" | "percentual_receita" | "meses_custos";
+  target_value: number;
+  target_date?: string | null;
+  priority: number;
+  /** Aporte mensal planejado (entra nas projeções como dinheiro separado). */
+  monthly_contribution?: number | null;
+  movements: ReserveMovement[];
+  notes?: string;
+}
+
+/** Saldo bancário informado numa data (base do caixa atual). */
+export interface FinBalance extends Base {
+  date: string;
+  account: string;
+  amount: number;
+  notes?: string;
+}
+
+/** Compra ou investimento planejado. Só "aprovado" entra nas projeções. */
+export interface FinPlan extends Base {
+  description: string;
+  category: string;
+  amount: number;
+  month: string;
+  installments: number;
+  status: "ideia" | "aprovado" | "realizado" | "descartado";
+  notes?: string;
+}
+
+/** Histórico de alterações financeiras (antes/depois). */
+export interface FinHistory extends Base {
+  table_name: string;
+  record_id?: string | null;
+  action: "criou" | "alterou" | "excluiu" | "importou" | "configurou";
+  summary: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
 }
 
 export interface Report extends Base {
@@ -332,6 +480,8 @@ export interface Profile {
   /** Objetivos personalizados adicionados ao banco, por área. */
   objective_bank?: Record<string, string[]>;
   billing_rules?: BillingRules;
+  /** Configurações do módulo de gestão financeira (ver lib/finance/settings). */
+  finance_settings?: import("@/lib/finance/settings").FinanceSettings;
 }
 
 /** Regras de cobrança automática (as mensagens sempre aguardam aprovação antes do envio). */
@@ -514,6 +664,12 @@ export interface TableMap {
   tasks: ClinicTask;
   social_posts: SocialPost;
   charge_messages: ChargeMessage;
+  fin_contracts: FinContract;
+  fin_recurring: FinRecurring;
+  fin_reserves: FinReserve;
+  fin_balances: FinBalance;
+  fin_plans: FinPlan;
+  fin_history: FinHistory;
 }
 
 export type TableName = keyof TableMap;

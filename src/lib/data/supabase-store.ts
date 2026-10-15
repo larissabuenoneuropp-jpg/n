@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuditLog, Profile, TableMap, TableName } from "@/lib/types";
 import type { DataStore, ListOptions } from "./store";
 import { safeFileName, validateUpload } from "@/lib/uploads";
+import { ALL_TABLES } from "./tables";
 
 /** Campos controlados pelo banco: nunca aceitos do navegador (proteção contra mass assignment). */
 function clean(values: Record<string, unknown>) {
@@ -10,10 +11,7 @@ function clean(values: Record<string, unknown>) {
   return rest;
 }
 
-const TABLES: TableName[] = [
-  "patients", "assessments", "intervention_plans", "appointments", "session_records",
-  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts", "charge_messages",
-];
+const TABLES: TableName[] = ALL_TABLES;
 const BUCKET = "documents";
 
 export class SupabaseStore implements DataStore {

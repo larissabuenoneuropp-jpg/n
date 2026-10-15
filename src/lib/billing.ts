@@ -64,14 +64,14 @@ export async function generateChargeQueue(store: DataStore, profile: Profile | n
   // Pagamento registrado → cancela o que ainda não foi aprovado
   for (const m of existing.filter((x) => x.status === "pendente")) {
     const tx = txs.find((t) => t.id === m.transaction_id);
-    if (!tx || tx.paid_at) {
+    if (!tx || tx.paid_at || tx.status === "cancelado" || tx.status === "previsto") {
       await store.update("charge_messages", m.id, { status: "cancelada", error: "Pagamento registrado antes do envio" });
       cancelled++;
     }
   }
   if (!rules.enabled) return { created, cancelled };
   const rows: Partial<ChargeMessage>[] = [];
-  for (const tx of txs.filter((t) => t.type === "receita" && !t.paid_at && t.patient_id)) {
+  for (const tx of txs.filter((t) => t.type === "receita" && !t.paid_at && t.patient_id && t.status !== "previsto" && t.status !== "cancelado")) {
     const stage = currentStage(tx.due_date, rules);
     if (!stage) continue;
     const patient = patients.find((p) => p.id === tx.patient_id);

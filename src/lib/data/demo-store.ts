@@ -3,6 +3,7 @@ import type { AuditLog, Instrument, Profile, TableMap, TableName } from "@/lib/t
 import { uid } from "@/lib/utils";
 import type { DataStore, ListOptions } from "./store";
 import { buildSeed } from "./seed";
+import { ALL_TABLES } from "./tables";
 import { isPersonalMode } from "@/lib/supabase/config";
 import { validateUpload } from "@/lib/uploads";
 import { allFileKeys, blobToDataUrl, clearFiles, dataUrlToBlob, deleteFile, getFile, isIdbAvailable, putFile, requestPersistence } from "./local-files";
@@ -19,14 +20,12 @@ function initialData() {
     ...seed,
     patients: [], assessments: [], intervention_plans: [], appointments: [], session_records: [], documents: [],
     transactions: [], reports: [], assessment_records: [], receipts: [], social_posts: [], charge_messages: [],
+    fin_contracts: [], fin_recurring: [], fin_reserves: [], fin_balances: [], fin_plans: [], fin_history: [],
   };
 }
 
 const PREFIX = "np:demo:";
-const TABLES: TableName[] = [
-  "patients", "assessments", "intervention_plans", "appointments", "session_records",
-  "activities", "documents", "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts", "charge_messages",
-];
+const TABLES: TableName[] = ALL_TABLES;
 
 function getRaw(key: string) {
   return VAULT ? vaultGet(key) : localStorage.getItem(PREFIX + key);
@@ -57,7 +56,7 @@ export class DemoStore implements DataStore {
     if (typeof window !== "undefined" && !read("seeded", false)) {
       const seed = initialData();
       if (isPersonalMode) ["seeded_v2", "seeded_v3", "seeded_v4", "seeded_v5", "seeded_v6", "seeded_v7"].forEach((k) => write(k, true));
-      for (const t of TABLES) write(t, seed[t] ?? []);
+      for (const t of TABLES) write(t, (seed as Partial<Record<TableName, unknown[]>>)[t] ?? []);
       write("profile", seed.profile);
       write("audit", []);
       write("seeded", true);

@@ -24,8 +24,10 @@ export const INSTRUMENT_STATUS: Record<InstrumentStatus, { label: string; tone: 
   no_relatorio: { label: "No relatório", tone: "green" },
 };
 
-export function txStatus(t: { paid_at?: string | null; due_date: string }): { label: string; tone: Tone; key: "pago" | "pendente" | "atrasado" } {
+export function txStatus(t: { paid_at?: string | null; due_date: string; status?: string | null }): { label: string; tone: Tone; key: "pago" | "pendente" | "atrasado" | "previsto" | "cancelado" } {
+  if (t.status === "cancelado") return { label: "Cancelado", tone: "gray", key: "cancelado" };
   if (t.paid_at) return { label: "Pago", tone: "green", key: "pago" };
+  if (t.status === "previsto") return { label: "Previsto", tone: "gray", key: "previsto" };
   const today = new Date().toISOString().slice(0, 10);
   return t.due_date < today ? { label: "Atrasado", tone: "red", key: "atrasado" } : { label: "Pendente", tone: "amber", key: "pendente" };
 }

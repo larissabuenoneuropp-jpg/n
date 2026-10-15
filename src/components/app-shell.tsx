@@ -21,7 +21,7 @@ export const NAV = [
   { href: "/atividades", label: "Atividades", icon: BookOpen },
   { href: "/documentos", label: "Documentos", icon: FolderOpen },
   { href: "/relatorios", label: "Relatórios", icon: FileText },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/financeiro", label: "Gestão financeira", short: "Financeiro", icon: Wallet },
   { href: "/cobrancas", label: "Cobranças", icon: BellRing },
   { href: "/instagram", label: "Instagram", icon: Megaphone },
   { href: "/assistente", label: "Assistente IA", icon: Sparkles },
@@ -172,10 +172,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Navegação inferior mobile */}
       <nav className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-white/95 backdrop-blur-sm sm:hidden">
-        {NAV.filter((n) => MOBILE_NAV.includes(n.href)).map(({ href, label, icon: Icon }) => (
+        {NAV.filter((n) => MOBILE_NAV.includes(n.href)).map(({ href, label, icon: Icon, ...rest }) => (
           <Link key={href} href={href} className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px]", active(href) ? "text-brand-600" : "text-ink-faint")}>
             <Icon className="h-5 w-5" />
-            {label}
+            {"short" in rest && rest.short ? rest.short : label}
           </Link>
         ))}
       </nav>

@@ -14,11 +14,22 @@ insert into r (test, ok, detail) select 'mass assignment no update: id/owner/cre
 insert into public.session_records (patient_id, date) select id, current_date from public.patients where name = 'Paciente A2';
 insert into r (test, ok, detail) select 'sessão do próprio paciente aceita', count(*) = 1, count(*)::text from public.session_records;
 insert into r (test, ok, detail) select 'auditoria registrada', count(*) >= 3, count(*)::text from public.audit_logs;
+insert into public.fin_balances (date, amount, owner_id) values (current_date, 1000, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+insert into r (test, ok, detail) select 'financeiro: saldo gravado com owner de A', count(*) = 1 and bool_and(owner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), count(*)::text from public.fin_balances;
+insert into public.transactions (type, category, amount, due_date, competence, status, import_key) values ('retirada', 'Retirada pessoal', 500, current_date, to_char(current_date, 'YYYY-MM'), null, 'k1');
+insert into r (test, ok, detail) select 'financeiro: retirada aceita como tipo de lançamento', count(*) = 1, count(*)::text from public.transactions where type = 'retirada';
+do $$ begin
+  insert into public.transactions (type, category, amount, due_date, import_key) values ('receita', 'Sessão', 1, current_date, 'k1');
+  insert into r (test, ok, detail) values ('financeiro: mesma linha importada não entra duas vezes', false, 'duplicou!');
+exception when unique_violation then
+  insert into r (test, ok, detail) values ('financeiro: mesma linha importada não entra duas vezes', true, sqlerrm);
+end $$;
 
 -- Profissional B
 set request.jwt.claim.sub = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 insert into r (test, ok, detail) select 'RLS: B não vê pacientes de A', count(*) = 0, count(*)::text from public.patients;
 insert into r (test, ok, detail) select 'RLS: B não vê auditoria de A', count(*) = 0, count(*)::text from public.audit_logs;
+insert into r (test, ok, detail) select 'RLS: B não vê saldos nem lançamentos de A', (select count(*) from public.fin_balances) + (select count(*) from public.transactions) = 0, 'ok';
 update public.patients set name = 'invadido';
 reset role;
 insert into r (test, ok, detail) select 'RLS: B não altera paciente de A', count(*) = 0, count(*)::text from public.patients where name = 'invadido';

@@ -77,14 +77,14 @@ export function detectPending(d: {
   if (toApprove) out.push({ key: "aprovar-cobrancas", title: `Aprovar ${toApprove} mensagem(ns) de cobrança`, description: "Mensagens de WhatsApp/e-mail preparadas pelas datas de vencimento. Só são enviadas depois da sua aprovação.", priority: "urgente", category: "Financeiro", href: "/cobrancas" });
 
   // Financeiro: atrasos
-  const overdue = d.transactions.filter((t) => t.type === "receita" && !t.paid_at && t.due_date < today);
+  const overdue = d.transactions.filter((t) => t.type === "receita" && !t.paid_at && t.status !== "previsto" && t.status !== "cancelado" && t.due_date < today);
   const byPatient = new Map<string, number>();
   overdue.forEach((t) => byPatient.set(t.patient_id ?? "", (byPatient.get(t.patient_id ?? "") ?? 0) + Number(t.amount)));
   byPatient.forEach((total, pid) => {
     out.push({
       key: `atraso:${pid}`, title: `Cobrar pagamento em atraso${pid ? ` — ${name(pid)}` : ""}`,
       description: `R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} em aberto.`, priority: "urgente", category: "Financeiro",
-      patient_id: pid || undefined, href: pid ? `/pacientes/${pid}?tab=financeiro` : "/financeiro",
+      patient_id: pid || undefined, href: pid ? `/pacientes/${pid}?tab=financeiro` : "/financeiro/receitas?status=atrasado",
     });
   });
 
@@ -134,7 +134,7 @@ export function detectPending(d: {
   // Mensalidades do mês não geradas
   const thisMonth = monthKey(new Date());
   const withoutFee = active.filter((p) => p.payment_type === "particular" && !d.transactions.some((t) => t.patient_id === p.id && monthKey(t.due_date) === thisMonth));
-  if (withoutFee.length) out.push({ key: `mensalidades:${thisMonth}`, title: `Lançar cobranças do mês (${withoutFee.length} paciente(s))`, description: withoutFee.map((p) => p.name).join(", "), priority: "media", category: "Financeiro", href: "/financeiro" });
+  if (withoutFee.length) out.push({ key: `mensalidades:${thisMonth}`, title: `Lançar cobranças do mês (${withoutFee.length} paciente(s))`, description: withoutFee.map((p) => p.name).join(", "), priority: "media", category: "Financeiro", href: "/financeiro/receitas?aba=contratos" });
 
   // Uso pessoal (dados só no navegador): lembrar do backup semanal
   if (typeof window !== "undefined" && isPersonalMode) {

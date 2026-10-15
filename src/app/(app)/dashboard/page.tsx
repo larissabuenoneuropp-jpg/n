@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
   const thisMonth = monthKey(now);
   const revenue = txs.data.filter((t) => t.type === "receita" && t.paid_at && monthKey(t.paid_at) === thisMonth).reduce((s, t) => s + Number(t.amount), 0);
-  const pending = txs.data.filter((t) => t.type === "receita" && !t.paid_at).sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const pending = txs.data.filter((t) => t.type === "receita" && !t.paid_at && t.status !== "previsto" && t.status !== "cancelado").sort((a, b) => a.due_date.localeCompare(b.due_date));
   const pendingTotal = pending.reduce((s, t) => s + Number(t.amount), 0);
 
   // Ocupação da semana: horas agendadas / horas disponíveis (expediente × dias úteis)
@@ -92,7 +92,7 @@ export default function DashboardPage() {
           { href: "/pacientes?novo=1", label: "Novo paciente", icon: UserPlus },
           { href: "/agenda?novo=1", label: "Agendar", icon: CalendarPlus },
           { href: "/pacientes", label: "Registrar sessão", icon: NotebookPen },
-          { href: "/financeiro?novo=1", label: "Lançamento", icon: Wallet },
+          { href: "/financeiro/receitas?novo=1", label: "Lançamento", icon: Wallet },
           { href: "/relatorios?novo=1", label: "Novo documento", icon: FilePlus2 },
           { href: "/assistente", label: "Assistente IA", icon: Sparkles },
         ].map(({ href, label, icon: Icon }) => (
@@ -253,7 +253,7 @@ export default function DashboardPage() {
           </Card>
 
           <Card>
-            <CardHeader title="Pendências financeiras" icon={<AlertCircle className="h-4 w-4" />} action={<Link href="/financeiro" className="text-xs text-brand-600 hover:underline">Financeiro</Link>} />
+            <CardHeader title="Pendências financeiras" icon={<AlertCircle className="h-4 w-4" />} action={<Link href="/financeiro/receitas?status=atrasado" className="text-xs text-brand-600 hover:underline">Financeiro</Link>} />
             {pending.length === 0 ? (
               <EmptyState title="Tudo em dia" />
             ) : (

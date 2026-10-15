@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "security:check": "node scripts/check-secrets.mjs && npm audit --omit=dev"
+    "security:check": "node scripts/check-secrets.mjs && npm audit --omit=dev",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -30,7 +31,8 @@
     "@types/react-dom": "^19.3.0",
     "postcss": "^8.5.29",
     "tailwindcss": "4.3.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "overrides": {
     "next": {

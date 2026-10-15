@@ -23,7 +23,7 @@ No modo demonstração: dados fictícios salvos apenas no navegador (localStorag
 ### Produção (Supabase + OpenAI)
 
 1. Crie um projeto no [Supabase](https://supabase.com).
-2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações) `0005_social_posts.sql` (conteúdos de Instagram) `0006_areas_ran_import.sql` (áreas de intervenção, RAN, importação e cobranças) e `0007_security_hardening.sql` (reforço contra mass assignment, sem acesso anônimo, limites do bucket) — ou tudo de uma vez com `supabase/instalacao-completa.sql`.
+2. No **SQL Editor**, execute em ordem `supabase/migrations/0001_init.sql` (tabelas, RLS, auditoria, bucket privado `documents`) `0002_instruments_records.sql` (biblioteca de testes e registros de aplicação) `0003_contracts_receipts.sql` (dados do contrato e recibos) `0004_tasks_objectives_attachments.sql` (tarefas, resultados por objetivo e anexos em avaliações) `0005_social_posts.sql` (conteúdos de Instagram) `0006_areas_ran_import.sql` (áreas de intervenção, RAN, importação e cobranças) `0007_security_hardening.sql` (reforço contra mass assignment, sem acesso anônimo, limites do bucket) e `0008_gestao_financeira.sql` (módulo de gestão financeira) — ou tudo de uma vez com `supabase/instalacao-completa.sql`.
 3. Em *Authentication › Providers › Email*, mantenha **"Confirm email" ativado**: o NeuroPlanner só libera o acesso depois que o e-mail é confirmado pelo link enviado.
 4. Em *Authentication › URL Configuration*, adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento.
 5. Preencha `.env.local`:
@@ -71,7 +71,7 @@ As cores seguem a identidade visual Larissa Bueno (terracota, areia, sálvia, mo
 | **Banco de atividades** | 24 atividades iniciais; filtros por idade, área, diagnóstico, nível, busca por habilidade; favoritos; cadastro próprio |
 | **Documentos** | Upload vinculado ao paciente (relatórios, anamneses, termos, contratos, laudos, encaminhamentos, fotos, PDF, vídeos) em bucket privado |
 | **Agenda** | Dia/semana/mês, arrastar para reagendar (com aviso de conflito), recorrência semanal/quinzenal, bloqueios, status, lembretes |
-| **Financeiro** | Receitas, despesas, mensalidades (geração automática), sessões de convênio realizadas, pago/pendente/atrasado, fluxo de caixa, gráfico mensal, lucro, inadimplência, **exportação Excel (.xlsx)** e PDF (impressão) |
+| **Gestão financeira** | 11 seções: visão geral, receitas e contratos, despesas e recorrentes, fluxo de caixa, pró-labore e retiradas, orçamento disponível ("quanto posso gastar?"), reservas, projeções e cenários até dez/2027 com simulador de crescimento, planejamento tributário (Carnê-Leão, regras com fonte e validade, comparação PF × PJ), relatórios (DRE, impostos, inadimplência, orçado × realizado…) e configurações (importação da planilha de sessões, extratos CSV/Excel/OFX com conciliação, backup, histórico de alterações). Detalhes em `docs/financeiro/` |
 | **Relatórios** | Relatório neuropsicopedagógico, encaminhamento, declaração, atestado de comparecimento, plano de intervenção e resumo de evolução — pré-preenchidos, editáveis, com redação assistida por IA e PDF com logo/assinatura |
 | **Configurações** | Clínica, logo, assinatura (imagem), CRNPP, CPF/CNPJ, PIX, valores, expediente, modelos de documentos, segurança/LGPD |
 | **Assistente IA** | Chat com assistente clínica, com contexto opcional de paciente |
@@ -122,7 +122,8 @@ Navegadores: o Tailwind 4 exige versões atuais (Chrome/Edge 111+, Safari 16.4+,
 - **Testes e protocolos:** a classificação de quem pode aplicar é uma referência. WISC, BPA, SON-R, Bender e Figuras de Rey estão como privativos de psicólogos; vários itens estão como "a confirmar" por falta de certeza. Faixas etárias e subtestes não foram preenchidos: confira no manual e personalize. A lista oficial é a do SATEPSI/CFP.
 - **Roteiros por IA** são genéricos de organização da sessão: por regra, a IA não reproduz itens, instruções literais nem tabelas normativas (material protegido por direitos autorais).
 - **Criptografia de campo no Supabase** (além da criptografia em repouso do provedor) não foi implementada; avaliar `pgsodium`/Vault para campos específicos. No uso pessoal, tudo é criptografado no navegador (cofre local).
-- Não há testes automatizados no repositório ainda (os fluxos foram verificados manualmente no navegador).
+- Testes automatizados cobrem o núcleo financeiro e os importadores (`npm test`); as demais telas foram verificadas manualmente no navegador.
+- **Gestão financeira:** cálculos gerenciais, não substituem o contador nem o Carnê-Leão Web. Regras sem confirmação do contador aparecem marcadas e, por padrão, usam a opção conservadora.
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.
 
 ## Uso pessoal, sem login (padrão sem Supabase)
@@ -194,6 +195,13 @@ Requer conta **Profissional** (Empresa ou Criador de conteúdo). Pela API oficia
 ## Identidade visual nos documentos
 
 Os arquivos em `public/brand/` (logo, ícones e cabeçalho) foram extraídos dos modelos de recibo e contrato enviados pela profissional e são usados no recibo e no papel timbrado. Os dados pessoais (CPF, endereço, contatos) **não** ficam no código: preencha em **Configurações** — o CPF da profissional é deixado em branco no modo demonstração de propósito.
+
+## Gestão financeira
+
+- Análise das planilhas enviadas (inconsistências, premissas): `docs/financeiro/01-analise-das-planilhas.md`.
+- Modelo, fórmulas e regras: `docs/financeiro/02-modelo-financeiro.md`.
+- Núcleo de cálculo puro e testado: `src/lib/finance/` (`npm test`). Para testar a importação com a planilha real sem versioná-la: `NP_SHEET=/caminho/planilha.xlsx npm test`.
+- As planilhas com dados de pacientes **não** ficam no repositório: a importação acontece no navegador, em Gestão financeira › Configurações › Importar.
 
 ## Arquitetura
 

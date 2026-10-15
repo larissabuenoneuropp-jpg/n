@@ -6,6 +6,7 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import type { DataStore, ListOptions } from "./store";
 import { SupabaseStore } from "./supabase-store";
 import { DemoStore } from "./demo-store";
+import { ALL_TABLES } from "./tables";
 import { ACTIVITY_LIBRARY } from "./activities-library";
 import { INSTRUMENT_LIBRARY } from "./instruments-library";
 import { ensureReceipt } from "@/lib/documents";
@@ -20,10 +21,6 @@ interface Ctx {
   bump: (table: TableName) => void;
 }
 
-const ALL_TABLES: TableName[] = [
-  "patients", "assessments", "intervention_plans", "appointments", "session_records", "activities", "documents",
-  "transactions", "reports", "instruments", "assessment_records", "receipts", "tasks", "social_posts", "charge_messages",
-];
 
 const DataContext = createContext<Ctx | null>(null);
 

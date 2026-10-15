@@ -1,306 +1,142 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { CheckCircle2, FileDown, FileSpreadsheet, Pencil, Plus, Receipt, Trash2, Wand2 } from "lucide-react";
-import { Badge, Button, Card, CardHeader, EmptyState, Field, Input, Modal, PageHeader, Segmented, Select, Spinner, useToast } from "@/components/ui";
-import { BarChart } from "@/components/charts";
-import { ReceiptsList } from "@/components/finance/receipts-list";
-import { useCollection, useData } from "@/lib/data/provider";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/catalog";
-import { txStatus } from "@/lib/labels";
-import type { Transaction } from "@/lib/types";
-import { MONTHS, downloadBlob, formatDate, money, monthKey, today } from "@/lib/utils";
+import Link from "next/link";
+import { useMemo } from "react";
+import { ArrowRight, CheckCircle2, Circle } from "lucide-react";
+import { Card, CardHeader, PageHeader } from "@/components/ui";
+import { AlertList, Explain, FinChart, FinLoading, Kpi, pctLabel } from "@/components/finance/kit";
+import { useFinance } from "@/lib/finance/use-finance";
+import { monthLabel, monthLongLabel } from "@/lib/finance/calendar";
+import { formatBRL } from "@/lib/finance/money";
+import { reserveBalance } from "@/lib/finance/reserves";
 
-const compact = (v: number) => (v >= 1000 ? `R$ ${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : `R$ ${Math.round(v)}`);
+export default function FinanceOverview() {
+  const f = useFinance();
+  const a = f.analysis;
 
-function TxModal({ open, onClose, initial, onSave }: { open: boolean; onClose: () => void; initial: Partial<Transaction> | null; onSave: (t: Partial<Transaction>) => Promise<unknown> }) {
-  const patients = useCollection("patients", { orderBy: "name", ascending: true });
-  const [f, setF] = useState<Partial<Transaction>>(initial ?? {});
-  const [last, setLast] = useState(initial);
-  const [saving, setSaving] = useState(false);
-  if (initial !== last) {
-    setLast(initial);
-    setF(initial ?? {});
-  }
-  const cats = f.type === "despesa" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-  return (
-    <Modal open={open} onClose={onClose} title={f.id ? "Editar lançamento" : "Novo lançamento"}
-      footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button loading={saving} onClick={async () => {
-        if (!f.amount || !f.due_date) return;
-        setSaving(true);
-        await onSave({ ...f, paid_at: f.paid_at || null, patient_id: f.patient_id || null }).finally(() => setSaving(false));
-        onClose();
-      }}>Salvar</Button></>}>
-      <div className="space-y-3">
-        <Segmented value={f.type ?? "receita"} onChange={(type) => setF({ ...f, type, category: type === "despesa" ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0] })}
-          options={[{ value: "receita", label: "Receita" }, { value: "despesa", label: "Despesa" }]} />
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Categoria"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={cats} /></Field>
-          <Field label="Valor (R$)"><Input type="number" min={0} step="0.01" value={f.amount ?? ""} onChange={(e) => setF({ ...f, amount: Number(e.target.value) })} /></Field>
-        </div>
-        <Field label="Descrição"><Input value={f.description ?? ""} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
-        {f.type !== "despesa" && (
-          <Field label="Paciente"><Select value={f.patient_id ?? ""} onChange={(e) => setF({ ...f, patient_id: e.target.value })} placeholder="—" options={patients.data.map((p) => ({ value: p.id, label: p.name }))} /></Field>
-        )}
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="Vencimento"><Input type="date" value={f.due_date ?? ""} onChange={(e) => setF({ ...f, due_date: e.target.value })} /></Field>
-          <Field label="Pago em"><Input type="date" value={f.paid_at ?? ""} onChange={(e) => setF({ ...f, paid_at: e.target.value })} /></Field>
-          <Field label="Forma"><Select value={f.method ?? ""} onChange={(e) => setF({ ...f, method: e.target.value })} placeholder="—" options={["PIX", "Dinheiro", "Cartão", "Transferência", "Boleto", "Convênio"]} /></Field>
-        </div>
-      </div>
-    </Modal>
-  );
-}
+  const charts = useMemo(() => {
+    if (!a) return null;
+    const hist = a.dre.slice(-12);
+    const proj = a.projections.realista.months;
+    const expenses = new Map<string, number>();
+    for (const row of a.closed.slice(-3)) {
+      const l = a.ledger.get(row.month);
+      for (const [cat, v] of Object.entries(l?.expensesByCategory ?? {})) expenses.set(cat, (expenses.get(cat) ?? 0) + v);
+    }
+    return {
+      revenue: hist.map((r) => ({ x: monthLabel(r.month), faturado: r.gross, recebido: r.received })),
+      result: hist.map((r) => ({ x: monthLabel(r.month), operacional: r.opResult, liquido: r.netResult })),
+      margins: hist.map((r) => ({ x: monthLabel(r.month), op: r.opMargin === null ? null : Math.round(r.opMargin * 1000) / 10, liq: r.netMargin === null ? null : Math.round(r.netMargin * 1000) / 10 })),
+      flows: hist.map((r) => ({ x: monthLabel(r.month), entradas: r.received, saidas: r.paidOut + r.withdrawals })),
+      sessions: hist.map((r) => ({ x: monthLabel(r.month), realizadas: r.sessionsDone, faltas: r.absences })),
+      patients: hist.map((r) => ({ x: monthLabel(r.month), pacientes: r.payers })),
+      cash: proj.map((m) => ({ x: monthLabel(m.month), caixa: m.cashEnd, piso: m.floor })),
+      projection: proj.map((m) => ({ x: monthLabel(m.month), receita: m.grossRevenue, resultado: m.netResult })),
+      expenses: [...expenses.entries()].sort((x, y) => y[1] - x[1]),
+    };
+  }, [a]);
 
-function FinanceInner() {
-  const params = useSearchParams();
-  const toast = useToast();
-  const { store, bump } = useData();
-  const txs = useCollection("transactions", { orderBy: "due_date" });
-  const patients = useCollection("patients");
-  const appts = useCollection("appointments");
-  const [month, setMonth] = useState(monthKey(new Date()));
-  const [type, setType] = useState<"todos" | "receita" | "despesa">("todos");
-  const [status, setStatus] = useState("");
-  const [modal, setModal] = useState<Partial<Transaction> | null>(params.get("novo") === "1" ? { type: "receita", category: "Sessão", due_date: today() } : null);
-  const pmap = useMemo(() => new Map(patients.data.map((p) => [p.id, p])), [patients.data]);
+  if (f.loading || !a || !charts) return <FinLoading />;
+  const cur = a.projections.realista.months[0];
+  const curDre = a.current;
+  const s = f.settings;
+  const b = a.budget;
+  const pl = a.prolabore;
+  const userReserves = f.data.reserves.reduce((acc, r) => acc + reserveBalance(r, a.today), 0);
+  const taxLine = b.lines.find((l) => l.key === "tributos")!;
+  const snapshot = s.budget_snapshot?.months[a.currentMonth];
 
-  const inMonth = txs.data.filter((t) => monthKey(t.due_date) === month || (t.paid_at && monthKey(t.paid_at) === month));
-  const list = inMonth.filter((t) => (type === "todos" || t.type === type) && (!status || txStatus(t).key === status));
-
-  const received = txs.data.filter((t) => t.type === "receita" && t.paid_at && monthKey(t.paid_at) === month).reduce((s, t) => s + Number(t.amount), 0);
-  const expenses = txs.data.filter((t) => t.type === "despesa" && t.paid_at && monthKey(t.paid_at) === month).reduce((s, t) => s + Number(t.amount), 0);
-  const billed = txs.data.filter((t) => t.type === "receita" && monthKey(t.due_date) === month);
-  const overdue = txs.data.filter((t) => t.type === "receita" && txStatus(t).key === "atrasado");
-  const overdueTotal = overdue.reduce((s, t) => s + Number(t.amount), 0);
-  const pendingMonth = billed.filter((t) => !t.paid_at).reduce((s, t) => s + Number(t.amount), 0);
-  // Inadimplência: valor em atraso ÷ total de receitas já vencidas (todos os períodos)
-  const dueSoFar = txs.data.filter((t) => t.type === "receita" && t.due_date <= today()).reduce((s, t) => s + Number(t.amount), 0);
-  const delinquency = dueSoFar ? Math.round((overdueTotal / dueSoFar) * 100) : 0;
-
-  const chart = useMemo(() => {
-    const [y, m] = month.split("-").map(Number);
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(y, m - 1 - (5 - i), 1);
-      const k = monthKey(d);
-      const sum = (tp: string) => txs.data.filter((t) => t.type === tp && t.paid_at && monthKey(t.paid_at) === k).reduce((s, t) => s + Number(t.amount), 0);
-      const r = sum("receita");
-      const e = sum("despesa");
-      return { x: `${MONTHS[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`, receitas: r, despesas: e, lucro: r - e };
-    });
-  }, [txs.data, month]);
-
-  const monthLabel = (() => {
-    const [y, m] = month.split("-").map(Number);
-    return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  })();
-
-  /** Gera mensalidades para pacientes particulares ativos (valor × frequência × 4 semanas). */
-  async function generateMonthly() {
-    const [y, m] = month.split("-").map(Number);
-    const due = `${month}-05`;
-    const active = patients.data.filter((p) => p.status === "ativo" && p.payment_type === "particular" && p.session_value);
-    const existing = new Set(txs.data.filter((t) => t.category === "Mensalidade" && monthKey(t.due_date) === month).map((t) => t.patient_id));
-    const rows = active.filter((p) => !existing.has(p.id)).map((p) => ({
-      type: "receita" as const, category: "Mensalidade", patient_id: p.id, due_date: due,
-      description: `Mensalidade ${MONTHS[m - 1]}/${y} — ${p.name}`, amount: Number(p.session_value) * (p.weekly_frequency ?? 1) * 4,
-    }));
-    if (!rows.length) return toast("Nenhuma mensalidade nova para gerar.");
-    if (!confirm(`Gerar ${rows.length} mensalidade(s) com vencimento em ${formatDate(due)}?`)) return;
-    await store.insertMany("transactions", rows);
-    bump("transactions");
-    toast(`${rows.length} mensalidade(s) gerada(s)`);
-  }
-
-  /** Cobra sessões realizadas (pacientes por sessão/convênio) ainda não lançadas. */
-  async function billSessions() {
-    const billedAppts = new Set(txs.data.map((t) => t.appointment_id).filter(Boolean));
-    const rows = appts.data
-      .filter((a) => a.status === "realizado" && a.patient_id && !billedAppts.has(a.id) && monthKey(new Date(a.starts_at)) === month)
-      .map((a) => ({ a, p: pmap.get(a.patient_id!) }))
-      .filter(({ p }) => p && p.payment_type === "convenio" && p.session_value)
-      .map(({ a, p }) => ({
-        type: "receita" as const, category: "Sessão", patient_id: p!.id, appointment_id: a.id, due_date: a.starts_at.slice(0, 10),
-        description: `Sessão ${formatDate(a.starts_at.slice(0, 10))} — ${p!.name}${p!.insurance_name ? ` (${p!.insurance_name})` : ""}`, amount: Number(p!.session_value), method: "Convênio",
-      }));
-    if (!rows.length) return toast("Nenhuma sessão realizada pendente de lançamento (convênio).");
-    if (!confirm(`Lançar ${rows.length} sessão(ões) realizada(s)?`)) return;
-    await store.insertMany("transactions", rows);
-    bump("transactions");
-    toast(`${rows.length} sessão(ões) lançada(s)`);
-  }
-
-  async function exportExcel() {
-    const ExcelJS = (await import("exceljs")).default;
-    const wb = new ExcelJS.Workbook();
-    wb.creator = "NeuroPlanner";
-    const ws = wb.addWorksheet(`Lançamentos ${month}`);
-    ws.columns = [
-      { header: "Tipo", key: "type", width: 10 }, { header: "Categoria", key: "category", width: 16 },
-      { header: "Descrição", key: "description", width: 40 }, { header: "Paciente", key: "patient", width: 26 },
-      { header: "Vencimento", key: "due", width: 12 }, { header: "Pago em", key: "paid", width: 12 },
-      { header: "Status", key: "status", width: 11 }, { header: "Forma", key: "method", width: 14 },
-      { header: "Valor (R$)", key: "amount", width: 14, style: { numFmt: '"R$" #,##0.00' } },
-    ];
-    ws.getRow(1).font = { bold: true };
-    list.forEach((t) => ws.addRow({
-      type: t.type, category: t.category, description: t.description, patient: t.patient_id ? pmap.get(t.patient_id)?.name : "",
-      due: formatDate(t.due_date), paid: t.paid_at ? formatDate(t.paid_at) : "", status: txStatus(t).label, method: t.method,
-      amount: t.type === "despesa" ? -Number(t.amount) : Number(t.amount),
-    }));
-    const flow = wb.addWorksheet("Fluxo de caixa");
-    flow.columns = [{ header: "Mês", key: "x", width: 12 }, { header: "Receitas", key: "receitas", width: 14 }, { header: "Despesas", key: "despesas", width: 14 }, { header: "Lucro", key: "lucro", width: 14 }];
-    flow.getRow(1).font = { bold: true };
-    chart.forEach((c) => flow.addRow(c));
-    const buf = await wb.xlsx.writeBuffer();
-    downloadBlob(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `financeiro-${month}.xlsx`);
-  }
-
-  async function markPaid(t: Transaction) {
-    await txs.update(t.id, { paid_at: today() });
-    toast("Pagamento registrado — recibo emitido");
-  }
-
-  // Resumo por paciente no mês selecionado
-  const byPatient = patients.data
-    .map((p) => {
-      const own = billed.filter((t) => t.patient_id === p.id);
-      return { p, pago: own.filter((t) => t.paid_at).reduce((s, t) => s + Number(t.amount), 0), aberto: own.filter((t) => !t.paid_at).reduce((s, t) => s + Number(t.amount), 0) };
-    })
-    .filter((x) => x.pago || x.aberto)
-    .sort((a, b) => b.pago + b.aberto - (a.pago + a.aberto));
-
-  if (txs.loading) return <Spinner />;
+  const setup = [
+    { done: f.data.balances.length > 0, label: "Informe o saldo bancário atual", href: "/financeiro/fluxo" },
+    { done: f.data.contracts.some((k) => k.active), label: "Cadastre os contratos/pacientes ativos (base das projeções)", href: "/financeiro/receitas?aba=contratos" },
+    { done: f.data.transactions.some((t) => t.import_key) || a.closed.length >= 3, label: "Importe o histórico (planilha de sessões e financeiro)", href: "/financeiro/configuracoes?aba=importar" },
+    { done: f.data.recurring.length > 0, label: "Cadastre as despesas recorrentes (supervisão, cursos, espaço)", href: "/financeiro/despesas?aba=recorrentes" },
+    { done: s.min_cash !== null, label: "Defina o saldo mínimo de segurança", href: "/financeiro/configuracoes" },
+    { done: a.missingTax.length === 0, label: `Complete os dados tributários (${a.missingTax.length} faltando)`, href: "/financeiro/tributario" },
+  ];
+  const setupDone = setup.filter((x) => x.done).length;
 
   return (
     <>
-      <PageHeader title="Financeiro" subtitle="Receitas, despesas, mensalidades e fluxo de caixa"
-        actions={
-          <>
-            <Button variant="secondary" className="no-print" onClick={exportExcel}><FileSpreadsheet className="h-4 w-4" /> Excel</Button>
-            <Button variant="secondary" className="no-print" onClick={() => window.print()}><FileDown className="h-4 w-4" /> PDF</Button>
-            <Button className="no-print" onClick={() => setModal({ type: "receita", category: "Sessão", due_date: today() })}><Plus className="h-4 w-4" /> Lançamento</Button>
-          </>
-        } />
+      <PageHeader title="Gestão financeira" subtitle={`${monthLongLabel(a.currentMonth)} · valores calculados a partir dos seus lançamentos, contratos e configurações`} />
 
-      <div className="no-print mb-4 flex flex-wrap items-center gap-2">
-        <Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className="w-44" />
-        <Button variant="secondary" size="sm" className="h-9" onClick={generateMonthly}><Wand2 className="h-4 w-4" /> Gerar mensalidades</Button>
-        <Button variant="secondary" size="sm" className="h-9" onClick={billSessions}><Receipt className="h-4 w-4" /> Lançar sessões realizadas</Button>
-      </div>
-      <p className="mb-4 hidden text-sm print:block">Período: {monthLabel}</p>
+      {setupDone < setup.length && (
+        <Card className="mb-5">
+          <CardHeader title={`Configuração inicial — ${setupDone} de ${setup.length}`} subtitle="Enquanto estes itens faltarem, alguns números aparecem como provisórios." />
+          <ul className="grid gap-1 p-4 sm:grid-cols-2">
+            {setup.map((x) => (
+              <li key={x.label}>
+                <Link href={x.href} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-canvas">
+                  {x.done ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" /> : <Circle className="h-4 w-4 shrink-0 text-ink-faint" />}
+                  <span className={x.done ? "text-ink-faint line-through" : "text-ink"}>{x.label}</span>
+                  {!x.done && <ArrowRight className="ml-auto h-3.5 w-3.5 text-ink-faint" />}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {[
-          ["Entradas recebidas", money(received), "text-ink"],
-          ["Saídas pagas", money(expenses), "text-ink"],
-          ["Lucro", money(received - expenses), received - expenses >= 0 ? "text-emerald-700" : "text-red-600"],
-          ["A receber (mês)", money(pendingMonth), "text-ink"],
-          ["Inadimplência (geral)", `${delinquency}% · ${money(overdueTotal)}`, overdueTotal ? "text-red-600" : "text-ink"],
-        ].map(([l, v, c]) => (
-          <Card key={l} className="p-4">
-            <p className="text-xs text-ink-soft">{l}</p>
-            <p className={`mt-1 text-lg font-semibold tabular-nums ${c}`}>{v}</p>
-          </Card>
-        ))}
+      <h2 className="mb-3 font-display text-base font-semibold">Respostas rápidas</h2>
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi emphasis label="Quanto posso gastar este mês (operação)" value={b.freeCash === null ? "Informe o saldo" : formatBRL(b.limits.operational)} provisional={b.provisional} hint={<Link className="text-brand-700 hover:underline" href="/financeiro/orcamento">Ver orçamento disponível</Link>} steps={[b.limitNotes.operational, ...b.lines.map((l) => `${l.sign > 0 ? "+" : "−"} ${l.label}: ${formatBRL(l.amount)}`)]} />
+        <Kpi emphasis label="Pró-labore recomendado (mensal)" value={formatBRL(pl.recommended.amount)} provisional={pl.provisional} hint={`Máximo sustentável: ${formatBRL(pl.maximum.amount)}`} steps={pl.explanation} />
+        <Kpi emphasis label="Posso transferir para minha conta agora" value={formatBRL(pl.availableNow)} provisional={b.freeCash === null} hint={`Já retirado no mês: ${formatBRL(pl.withdrawnThisMonth)}`} steps={pl.availableExplanation} />
+        <Kpi emphasis label="Compra extraordinária possível agora" value={formatBRL(b.limits.investment)} provisional={b.provisional} hint={<Link className="text-brand-700 hover:underline" href="/financeiro/orcamento#simular">Simular uma compra</Link>} steps={[b.limitNotes.investment]} />
       </div>
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-3">
+      <h2 className="mb-3 font-display text-base font-semibold">{monthLongLabel(a.currentMonth)}</h2>
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-6">
+        <Kpi label="Faturamento bruto (lançado)" value={formatBRL(curDre?.gross ?? 0)} hint={`Projeção do mês: ${formatBRL(cur.grossRevenue)}`} steps={["Serviços prestados no mês (competência), faturados ou já recebidos. Não inclui lançamentos previstos nem cancelados.", `A projeção soma os contratos ainda não lançados: ${formatBRL(cur.grossRevenue)}.`]} />
+        <Kpi label="Efetivamente recebido" value={formatBRL(curDre?.received ?? 0)} hint="Dinheiro que entrou no mês" />
+        <Kpi label="A receber" value={formatBRL(a.receivables.total)} tone={a.receivables.overdueTotal ? "bad" : "default"} hint={a.receivables.overdueTotal ? `${formatBRL(a.receivables.overdueTotal)} em atraso` : "Nada em atraso"} />
+        <Kpi label="Despesas fixas" value={formatBRL(cur.fixedCosts + cur.operatingTaxes)} hint="Lançadas + recorrentes previstas" />
+        <Kpi label="Despesas variáveis" value={formatBRL(cur.variableCosts)} hint={`${cur.expectedSessionsDone.toLocaleString("pt-BR")} sessões previstas`} />
+        <Kpi label="Tributos e obrigações provisionados" value={formatBRL(taxLine.amount)} steps={[taxLine.detail]} />
+        <Kpi label="Resultado operacional estimado" value={formatBRL(cur.operatingResult)} tone={cur.operatingResult < 0 ? "bad" : "default"} steps={["Receita líquida − custos variáveis − despesas fixas − taxas − extraordinárias (competência, mês inteiro estimado)."]} />
+        <Kpi label="Lucro líquido estimado" value={formatBRL(cur.netResult)} provisional={s.tax.inss.monthly_amount === null} tone={cur.netResult < 0 ? "bad" : "default"} steps={["Resultado operacional − IR (Carnê-Leão + provisão de ajuste) − INSS.", s.tax.inss.monthly_amount === null && "INSS não informado: valor provisório."]} />
+        <Kpi label="Margem operacional · líquida" value={`${pctLabel(cur.operatingMargin)} · ${pctLabel(cur.netMargin)}`} steps={["Margem operacional = resultado operacional ÷ receita líquida.", "Margem líquida = lucro líquido ÷ receita líquida (só com INSS informado)."]} />
+        <Kpi label="Pró-labore planejado" value={s.pro_labore_planned === null ? "Não definido" : formatBRL(s.pro_labore_planned)} tone={pl.plannedExceedsMax ? "bad" : "default"} hint={pl.plannedExceedsMax ? "Acima do sustentável" : undefined} />
+        <Kpi label="Pró-labore já retirado" value={formatBRL(pl.withdrawnThisMonth)} />
+        <Kpi label="Caixa atual" value={a.cash.amount === null ? "Não informado" : formatBRL(a.cash.amount)} tone={a.cash.amount === null ? "muted" : "default"} steps={[a.cash.explanation]} />
+        <Kpi label="Reservas comprometidas" value={formatBRL(userReserves + taxLine.amount)} hint={`Reservas ${formatBRL(userReserves)} + tributos ${formatBRL(taxLine.amount)}`} />
+        <Kpi label="Caixa livre para novas despesas" value={b.freeCash === null ? "—" : formatBRL(b.freeCash)} tone={b.freeCash !== null && b.freeCash < 0 ? "bad" : "good"} provisional={b.provisional} />
+        <Kpi label="Meta mensal de faturamento" value={s.goal_monthly_revenue ? formatBRL(s.goal_monthly_revenue) : "Não definida"} hint={s.goal_monthly_revenue ? `Projeção: ${pctLabel(cur.grossRevenue / s.goal_monthly_revenue, 0)} da meta` : <Link className="text-brand-700 hover:underline" href="/financeiro/configuracoes">Definir meta</Link>} />
+        <Kpi label="Ocupação da agenda" value={pctLabel(cur.occupancy, 0)} hint={`${cur.plannedSessions.toLocaleString("pt-BR")} de ${cur.capacitySessions.toLocaleString("pt-BR")} sessões (${s.capacity_per_week}/sem × ${cur.weeks.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} sem)`} />
+        <Kpi label="Real × planejado" value={snapshot ? formatBRL((curDre?.gross ?? 0) - snapshot.revenue) : "Sem orçamento salvo"} tone={snapshot ? ((curDre?.gross ?? 0) >= snapshot.revenue ? "good" : "bad") : "muted"} hint={snapshot ? `Faturado ${formatBRL(curDre?.gross ?? 0)} de ${formatBRL(snapshot.revenue)} planejados` : <Link className="text-brand-700 hover:underline" href="/financeiro/projecoes">Salvar orçamento do ano</Link>} />
+      </div>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Entradas e saídas" subtitle="Valores efetivamente pagos, últimos 6 meses" />
-          <div className="p-5">
-            <BarChart data={chart} xKey="x" series={[{ key: "receitas", label: "Entradas" }, { key: "despesas", label: "Saídas" }]} format={compact} />
-          </div>
+          <CardHeader title="Alertas e recomendações" subtitle="Calculados com os seus números" />
+          <AlertList alerts={a.alerts} limit={6} />
         </Card>
         <Card>
-          <CardHeader title="Fluxo de caixa" />
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs text-ink-faint"><tr><th className="px-5 py-2 font-medium">Mês</th><th className="px-2 py-2 text-right font-medium">Saldo</th><th className="px-5 py-2 text-right font-medium">Acumulado</th></tr></thead>
-            <tbody className="divide-y divide-line">
-              {chart.map((c, i) => (
-                <tr key={c.x}>
-                  <td className="px-5 py-2 text-ink-soft">{c.x}</td>
-                  <td className={`px-2 py-2 text-right tabular-nums ${c.lucro < 0 ? "text-red-600" : ""}`}>{money(c.lucro)}</td>
-                  <td className="px-5 py-2 text-right tabular-nums text-ink-soft">{money(chart.slice(0, i + 1).reduce((s, x) => s + x.lucro, 0))}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <CardHeader title="Distribuição das despesas" subtitle="Últimos 3 meses fechados, por categoria" />
+          <div className="space-y-2 p-5">
+            {charts.expenses.length === 0 && <p className="text-sm text-ink-faint">Sem despesas lançadas nos últimos meses.</p>}
+            {charts.expenses.map(([cat, v]) => {
+              const total = charts.expenses.reduce((acc, x) => acc + x[1], 0);
+              return (
+                <div key={cat}>
+                  <div className="flex justify-between gap-2 text-xs"><span className="truncate text-ink-soft">{cat}</span><span className="tabular-nums">{formatBRL(v)} · {pctLabel(v / total, 0)}</span></div>
+                  <div className="mt-1 h-1.5 rounded-full bg-canvas"><div className="h-1.5 rounded-full bg-brand-600" style={{ width: `${(v / total) * 100}%` }} /></div>
+                </div>
+              );
+            })}
+          </div>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader title={`Lançamentos — ${monthLabel}`}
-          action={<div className="no-print flex flex-wrap gap-2">
-            <Segmented value={type} onChange={setType} options={[{ value: "todos", label: "Todos" }, { value: "receita", label: "Receitas" }, { value: "despesa", label: "Despesas" }]} />
-            <Select className="h-8 w-32 text-xs" value={status} onChange={(e) => setStatus(e.target.value)} placeholder="Status" options={[{ value: "pago", label: "Pago" }, { value: "pendente", label: "Pendente" }, { value: "atrasado", label: "Atrasado" }]} />
-          </div>} />
-        {list.length === 0 ? <EmptyState title="Nenhum lançamento no período" /> : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="bg-canvas text-left text-xs text-ink-faint">
-                <tr><th className="px-5 py-2 font-medium">Descrição</th><th className="px-3 py-2 font-medium">Categoria</th><th className="px-3 py-2 font-medium">Vencimento</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 text-right font-medium">Valor</th><th className="no-print px-3 py-2" /></tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {list.map((t) => {
-                  const st = txStatus(t);
-                  return (
-                    <tr key={t.id}>
-                      <td className="px-5 py-2.5">
-                        <p>{t.description || t.category}</p>
-                        {t.patient_id && <p className="text-xs text-ink-faint">{pmap.get(t.patient_id)?.name}</p>}
-                      </td>
-                      <td className="px-3 py-2.5 text-ink-soft">{t.category}</td>
-                      <td className="px-3 py-2.5 text-ink-soft">{formatDate(t.due_date)}</td>
-                      <td className="px-3 py-2.5"><Badge tone={st.tone}>{st.label}</Badge></td>
-                      <td className={`px-3 py-2.5 text-right font-medium tabular-nums ${t.type === "despesa" ? "text-red-600" : "text-emerald-700"}`}>{t.type === "despesa" ? "−" : "+"} {money(t.amount)}</td>
-                      <td className="no-print px-3 py-2.5">
-                        <div className="flex justify-end gap-1">
-                          {!t.paid_at && <Button variant="ghost" size="sm" onClick={() => markPaid(t)} title="Marcar como pago"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></Button>}
-                          <Button variant="ghost" size="sm" onClick={() => setModal(t)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="sm" onClick={async () => { if (confirm("Excluir lançamento?")) await txs.remove(t.id); }} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader title={`Por paciente — ${monthLabel}`} subtitle="Cobranças com vencimento no mês" />
-          {byPatient.length === 0 ? <EmptyState title="Sem cobranças no mês" /> : (
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-ink-faint"><tr><th className="px-5 py-2 font-medium">Paciente</th><th className="px-2 py-2 text-right font-medium">Pago</th><th className="px-5 py-2 text-right font-medium">Em aberto</th></tr></thead>
-              <tbody className="divide-y divide-line">
-                {byPatient.map(({ p, pago, aberto }) => (
-                  <tr key={p.id}>
-                    <td className="px-5 py-2"><a className="hover:underline" href={`/pacientes/${p.id}?tab=financeiro`}>{p.name}</a></td>
-                    <td className="px-2 py-2 text-right tabular-nums text-emerald-700">{money(pago)}</td>
-                    <td className={`px-5 py-2 text-right tabular-nums ${aberto ? "text-red-600" : "text-ink-faint"}`}>{money(aberto)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
-        <div className="no-print"><ReceiptsList limit={8} /></div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card><CardHeader title="Faturamento e recebimentos" subtitle="Competência × caixa, por mês" /><div className="p-5"><FinChart data={charts.revenue} xKey="x" series={[{ key: "faturado", label: "Faturado" }, { key: "recebido", label: "Recebido", color: 1 }]} /></div></Card>
+        <Card><CardHeader title="Resultado" subtitle="Operacional e líquido (após IR e INSS)" /><div className="p-5"><FinChart data={charts.result} xKey="x" series={[{ key: "operacional", label: "Resultado operacional" }, { key: "liquido", label: "Lucro líquido", color: 1 }]} /></div></Card>
+        <Card><CardHeader title="Margens" subtitle="% da receita líquida" /><div className="p-5"><FinChart data={charts.margins} xKey="x" format={(v) => `${v}%`} tooltipFormat={(v) => `${v.toLocaleString("pt-BR")}%`} series={[{ key: "op", label: "Margem operacional", kind: "line" }, { key: "liq", label: "Margem líquida", kind: "line", color: 1 }]} /></div></Card>
+        <Card><CardHeader title="Entradas × saídas de caixa" subtitle="Inclui retiradas pessoais nas saídas" /><div className="p-5"><FinChart data={charts.flows} xKey="x" series={[{ key: "entradas", label: "Entradas" , color: 1 }, { key: "saidas", label: "Saídas", color: 0 }]} /></div></Card>
+        <Card><CardHeader title="Saldo de caixa projetado" subtitle="Cenário realista × piso (mínimo + tributos + reservas)" /><div className="p-5"><FinChart data={charts.cash} xKey="x" series={[{ key: "caixa", label: "Caixa no fim do mês", kind: "line", color: 1 }, { key: "piso", label: "Piso", kind: "line", dashed: true, color: 0 }]} /><Explain className="mt-3" steps={a.projections.realista.assumptions} title="Premissas" /></div></Card>
+        <Card><CardHeader title="Projeção dos próximos meses" subtitle="Cenário realista" /><div className="p-5"><FinChart data={charts.projection} xKey="x" series={[{ key: "receita", label: "Faturamento" }, { key: "resultado", label: "Lucro líquido", color: 1 }]} /></div></Card>
+        <Card><CardHeader title="Atendimentos" subtitle="Sessões realizadas e faltas registradas" /><div className="p-5"><FinChart data={charts.sessions} xKey="x" format={(v) => String(Math.round(v))} tooltipFormat={(v) => v.toLocaleString("pt-BR")} series={[{ key: "realizadas", label: "Realizadas", color: 1 }, { key: "faltas", label: "Faltas", color: 0 }]} /></div></Card>
+        <Card><CardHeader title="Pacientes atendidos" subtitle="Pagadores distintos com lançamento no mês" /><div className="p-5"><FinChart data={charts.patients} xKey="x" format={(v) => String(Math.round(v))} tooltipFormat={(v) => String(v)} series={[{ key: "pacientes", label: "Pacientes", kind: "line", color: 1 }]} /></div></Card>
       </div>
-
-      <TxModal open={Boolean(modal)} onClose={() => setModal(null)} initial={modal}
-        onSave={async (t) => { if (t.id) await txs.update(t.id, t); else await txs.insert({ type: "receita", ...t }); toast("Lançamento salvo"); }} />
     </>
-  );
-}
-
-export default function FinancePage() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <FinanceInner />
-    </Suspense>
   );
 }
