@@ -108,7 +108,7 @@ Resumo do que está implementado (e do que **não** está), item por item:
 | Respostas enxutas | APIs devolvem só os campos necessários; textos externos truncados. |
 | Cabeçalhos de segurança | CSP (produção), HSTS, X-Frame-Options, nosniff, COOP, CORP, Permissions-Policy, Referrer-Policy. |
 | HTTPS | Redirecionamento para HTTPS no middleware + HSTS (o Netlify já serve com HTTPS). |
-| Scan de dependências | `npm audit` no GitHub Actions (toda segunda e a cada push) + Dependabot semanal. **0 vulnerabilidades conhecidas** em todas as dependências, inclusive as de compilação (out/2026), após migrar para o Tailwind 4. |
+| Scan de dependências | `npm audit` no GitHub Actions (toda segunda e a cada push) + Dependabot semanal. **0 vulnerabilidades conhecidas** em todas as dependências, inclusive as de compilação e de testes (out/2026). |
 
 Também: logs de auditoria (criar/alterar/excluir) e exportação completa dos dados. O banco tem testes automáticos em PostgreSQL real (`scripts/test-db.sh`, também no GitHub Actions): RLS, mass assignment, paciente de outra conta, acesso anônimo e storage.
 
@@ -126,17 +126,26 @@ Navegadores: o Tailwind 4 exige versões atuais (Chrome/Edge 111+, Safari 16.4+,
 - **Gestão financeira:** cálculos gerenciais, não substituem o contador nem o Carnê-Leão Web. Regras sem confirmação do contador aparecem marcadas e, por padrão, usam a opção conservadora.
 - A conformidade com a LGPD depende também de processos (termos, DPO, contrato com operadores como Supabase e OpenAI) — o software dá suporte, não garante conformidade sozinho.
 
-## Usar só no meu computador (recomendado para dados reais)
+## Usar só no meu computador, em HTTPS (recomendado para dados reais)
 
-O sistema roda no seu próprio computador, sem site publicado: o servidor só aceita conexões do próprio computador (endereço 127.0.0.1) — nenhum outro aparelho, nem na mesma rede Wi-Fi, consegue abrir. Os dados continuam criptografados no navegador.
+O sistema roda no seu próprio computador, sem site publicado, no endereço **https://localhost:3000**. O servidor só aceita conexões do próprio computador — nenhum outro aparelho, nem na mesma rede Wi-Fi, consegue abrir. Os dados continuam criptografados no navegador.
 
 1. Instale o **Node.js 22 (LTS)** em https://nodejs.org (uma vez).
 2. Baixe o projeto (GitHub › Code › Download ZIP) e descompacte numa pasta sua.
 3. **Windows:** dois cliques em `Abrir-NeuroPlanner.bat`. **Mac:** clique com o botão direito em `Abrir-NeuroPlanner.command` › Abrir (na primeira vez o macOS pede confirmação). Ou, no Terminal, dentro da pasta: `npm run local`.
-4. Na primeira vez ele instala e prepara o sistema (alguns minutos). Depois abre `http://localhost:3000` no navegador. Para fechar, feche a janela preta.
+4. Na primeira vez ele instala, prepara o sistema (alguns minutos) e cria o **certificado HTTPS deste computador**:
+   - **Windows:** aparece um aviso “Você está prestes a instalar um certificado… NeuroPlanner - certificado local” — clique em **Sim**.
+   - **Mac:** o sistema pede a senha do seu usuário para confiar no certificado.
+   Depois abre https://localhost:3000 com o cadeado. Para fechar, feche a janela preta.
+
+Sobre o certificado (pasta `.local-https`, criada no seu computador e fora do Git):
+- Ele vale só para `localhost` e é assinado por uma autoridade criada na hora cuja **chave privada é descartada imediatamente** — ela nunca é gravada, então não pode ser usada para falsificar outros sites.
+- Validade de cerca de 2 anos; perto do fim, o atalho gera e instala um novo sozinho (e remove o antigo).
+- Navegadores recomendados: Chrome, Edge ou Safari. No Firefox pode aparecer um aviso, porque ele pode usar uma lista de certificados própria.
+- Se o certificado não puder ser criado, o atalho abre em `http://localhost:3000` (ainda só neste computador). Para forçar sem HTTPS: `npm run local -- --http`.
 
 Observações:
-- Use sempre o **mesmo navegador** e o endereço `http://localhost:3000`: os dados ficam guardados para esse endereço. Dados de um site publicado (Netlify) **não aparecem** aqui automaticamente — exporte o backup lá (Configurações › Segurança › Exportar meus dados) e restaure aqui (Configurações › Segurança › Restaurar backup).
+- Use sempre o **mesmo navegador** e o mesmo endereço: os dados ficam guardados para `https://localhost:3000`. Dados de outro endereço (um site publicado no Netlify, ou `http://localhost:3000`) **não aparecem** aqui automaticamente — exporte o backup lá (Configurações › Segurança › Exportar meus dados) e restaure aqui (Configurações › Segurança › Restaurar backup).
 - A IA funciona localmente sem a chave `APP_ACCESS_KEY`; para a IA real, crie um arquivo `.env.local` na pasta com `OPENAI_API_KEY=...` (opcional — sem ela, respostas de exemplo).
 - Atualizar o sistema: baixe a versão nova e abra pelo mesmo atalho (ele recompila sozinho). Seus dados ficam no navegador, não na pasta.
 - Faça backup semanal: se o navegador for limpo ou o computador trocado, só o backup recupera os dados.

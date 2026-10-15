@@ -7,3 +7,6 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# Certificado HTTPS do uso local (gerado em cada computador)
+.local-https
