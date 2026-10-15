@@ -1,8 +1,8 @@
 // Meu Financeiro — app independente, sem internet. Abre um arquivo de dados criptografado,
 // mostra as telas financeiras e grava as alterações de volta no arquivo.
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, FilePlus2, FolderOpen, Loader2, Lock, Save, ShieldCheck, WifiOff } from "lucide-react";
-import { Button, Card, Field, Input, ToastProvider } from "@/components/ui";
+import { AlertTriangle, CheckCircle2, FilePlus2, FolderOpen, KeyRound, Loader2, Lock, Save, ShieldCheck, WifiOff } from "lucide-react";
+import { Button, Card, Field, Input, Modal, ToastProvider } from "@/components/ui";
 import { FinanceNav } from "@/components/finance/kit";
 import { passphraseStrength } from "@/lib/passphrase";
 import { DataProvider } from "./shims/provider";
@@ -225,6 +225,48 @@ function Start({ onOpen }: { onOpen: (f: OpenFile) => void }) {
   );
 }
 
+/* ------------------------------- Trocar senha ------------------------------- */
+function ChangePassword({ open, forced, session, onClose, onChanged }: { open: boolean; forced: boolean; session: Session; onClose: () => void; onChanged: (s: Session) => Promise<void> }) {
+  const [cur, setCur] = useState("");
+  const [p1, setP1] = useState("");
+  const [p2, setP2] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const strength = passphraseStrength(p1);
+  async function submit() {
+    setErr("");
+    if (strength.problem) return setErr(strength.problem);
+    if (p1 !== p2) return setErr("As senhas novas não conferem.");
+    if (p1 === cur) return setErr("A senha nova precisa ser diferente da atual.");
+    setBusy(true);
+    try {
+      // Confere a senha atual: um teste cifrado com a sessão atual só abre com ela
+      const probe = await seal({ ok: true }, session);
+      await unseal(probe, cur).catch(() => { throw new Error("A senha atual não confere."); });
+      await onChanged(await newSession(p1));
+      setCur(""); setP1(""); setP2("");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Não foi possível trocar a senha.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal open={open} onClose={forced ? () => undefined : onClose} title={forced ? "Crie a sua senha" : "Trocar senha"}
+      footer={<>{!forced && <Button variant="secondary" onClick={onClose}>Cancelar</Button>}<Button loading={busy} onClick={submit}>Salvar nova senha</Button></>}>
+      <div className="space-y-3">
+        {forced && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">Este arquivo veio com uma <b>senha provisória</b>. Troque agora por uma senha só sua — depois disso, a provisória deixa de funcionar.</p>}
+        <Field label={forced ? "Senha provisória" : "Senha atual"}><Input type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></Field>
+        <Field label="Nova senha" hint="Mínimo de 12 caracteres. 3 ou 4 palavras sem relação, com números ou símbolos."><Input type="password" autoComplete="new-password" value={p1} onChange={(e) => setP1(e.target.value)} /></Field>
+        {p1 && <p className="text-[11px] text-ink-faint">{strength.problem ?? "Senha forte."}</p>}
+        <Field label="Repita a nova senha"><Input type="password" autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} /></Field>
+        <p className="text-[11px] text-ink-faint">Não existe recuperação de senha. Anote a nova senha em lugar seguro. Cópias antigas do arquivo continuam abrindo só com a senha antiga.</p>
+        {err && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{err}</p>}
+      </div>
+    </Modal>
+  );
+}
+
 /* ------------------------------ App com arquivo ------------------------------ */
 function Workspace({ open, onLock }: { open: OpenFile; onLock: () => void }) {
   const [save, setSave] = useState<SaveState>({ kind: "salvo", at: new Date() });
@@ -232,6 +274,9 @@ function Workspace({ open, onLock }: { open: OpenFile; onLock: () => void }) {
   const writing = useRef<Promise<void> | null>(null);
   const dirty = useRef(false);
   const storeRef = useRef<MemoryStore | null>(null);
+  const sessionRef = useRef<Session>(open.session);
+  const [pwOpen, setPwOpen] = useState(Boolean((open.snapshot.profile as { require_password_change?: boolean }).require_password_change));
+  const [pwForced, setPwForced] = useState(pwOpen);
 
   const flush = useCallback(async () => {
     const store = storeRef.current;
@@ -243,7 +288,7 @@ function Workspace({ open, onLock }: { open: OpenFile; onLock: () => void }) {
       dirty.current = false;
       setSave({ kind: "salvando" });
       try {
-        await writeToHandle(open.handle!, JSON.stringify(await seal(store.snapshot(), open.session)));
+        await writeToHandle(open.handle!, JSON.stringify(await seal(store.snapshot(), sessionRef.current)));
         setSave(dirty.current ? { kind: "pendente" } : { kind: "salvo", at: new Date() });
       } catch (e) {
         dirty.current = true;
@@ -268,10 +313,20 @@ function Workspace({ open, onLock }: { open: OpenFile; onLock: () => void }) {
   }, [open, flush]);
 
   const download = useCallback(async () => {
-    downloadText(todayName(), JSON.stringify(await seal(store.snapshot(), open.session)));
+    downloadText(todayName(), JSON.stringify(await seal(store.snapshot(), sessionRef.current)));
     dirty.current = false;
     setSave({ kind: "salvo", at: new Date() });
-  }, [store, open.session]);
+  }, [store]);
+
+  async function changeSession(next: Session) {
+    sessionRef.current = next;
+    // Tira a marca de senha provisória e grava já com a nova senha
+    await store.saveProfile({ require_password_change: false } as never);
+    if (open.handle) await flush();
+    else await download();
+    setPwOpen(false);
+    setPwForced(false);
+  }
 
   // Aviso ao fechar com alterações não gravadas
   useEffect(() => {
@@ -327,6 +382,7 @@ function Workspace({ open, onLock }: { open: OpenFile; onLock: () => void }) {
                 {open.handle
                   ? save.kind === "erro" && <Button size="sm" variant="secondary" onClick={() => void flush()}>Tentar de novo</Button>
                   : <Button size="sm" variant={dirty.current ? "primary" : "secondary"} onClick={download}><Save className="h-3.5 w-3.5" /> Salvar arquivo</Button>}
+                <Button size="sm" variant="ghost" onClick={() => { setPwForced(false); setPwOpen(true); }}><KeyRound className="h-3.5 w-3.5" /> Trocar senha</Button>
                 <Button size="sm" variant="ghost" onClick={async () => {
                   if (open.handle) await flush();
                   else if (dirty.current && !confirm("Há alterações não salvas. Bloquear mesmo assim? Elas serão perdidas.")) return;
@@ -339,6 +395,7 @@ function Workspace({ open, onLock }: { open: OpenFile; onLock: () => void }) {
             )}
             {idleWarn && <p className="bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-900">Bloqueio automático adiado porque há alterações não salvas. Salve o arquivo.</p>}
           </header>
+          <ChangePassword open={pwOpen} forced={pwForced} session={sessionRef.current} onClose={() => setPwOpen(false)} onChanged={changeSession} />
           <main className="mx-auto max-w-7xl px-4 pb-16 pt-4 sm:px-6 lg:px-10">
             <FinanceNav />
             <Suspense fallback={<div className="py-20 text-center text-ink-faint"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div>}>
